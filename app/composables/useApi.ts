@@ -6,5 +6,12 @@ export const useApi = () => {
     return await $fetch<T>(path, { baseURL, params })
   }
 
-  return { get }
+  const post = async <T>(path: string, body?: Record<string, any>) => {
+    return await $fetch<T>(path, {
+      baseURL,
+      method: "POST",
+      body
+    })
+  }
+  return { get , post }
 }
