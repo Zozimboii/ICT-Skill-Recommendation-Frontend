@@ -1,5 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  modules: [
+    '@nuxtjs/tailwindcss',
+  ],
+
+  css: [
+    '~/assets/css/tailwind.css',
+  ],
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   runtimeConfig: {
@@ -7,4 +14,5 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000',
     }
   }
+  
 })
