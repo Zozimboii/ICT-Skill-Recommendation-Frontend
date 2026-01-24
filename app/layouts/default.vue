@@ -32,6 +32,8 @@ const { isLoggedIn, logout } = useAuth()
             class="rounded-lg px-3 py-2 hover:bg-slate-100"
           >Assessment</NuxtLink>
 
+          <NuxtLink to="/chat" class="rounded-lg px-3 py-2 hover:bg-slate-100">Chat</NuxtLink>
+
           <template v-if="!isLoggedIn">
             <NuxtLink to="/login" class="rounded-lg px-3 py-2 hover:bg-slate-100">Login</NuxtLink>
             <NuxtLink to="/register" class="rounded-lg px-3 py-2 hover:bg-slate-100">Register</NuxtLink>
