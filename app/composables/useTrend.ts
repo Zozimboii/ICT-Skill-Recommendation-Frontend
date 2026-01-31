@@ -1,25 +1,27 @@
-export type TrendJobsdbItem = {
-  snapshot_date: string
-  job_count: number
-}
+//composable/useTrend.ts
 
-export type TrendJobsdbResponse = {
-  series: TrendJobsdbItem[]
-  // จะเพิ่ม field อื่นในอนาคตได้
-}
+import type { SkillTrendItem, TrendJobsdbItem, TrendResponse } from '~/types/Trend';
 
-const BASE_URL = '/api/v1/trends'
+const BASE_URL = '/api/v1/trends';
 
 export function useTrend() {
-  async function jobsdb(days = 30): Promise<TrendJobsdbResponse | null> {
-    const { data, error } = await useApiFetch<TrendJobsdbResponse>(`${BASE_URL}/jobsdb`, {
-      method: 'GET',
-      query: { days },
-    })
+    async function getCategoryTrend(days = 60): Promise<TrendResponse<TrendJobsdbItem> | null> {
+        const { data, error } = await useApiFetch<TrendResponse<TrendJobsdbItem>>(`${BASE_URL}/jobsdb`, {
+            method: 'GET',
+            query: { days },
+        });
+        if (error.value) throw error.value;
+        return data.value ?? null;
+    }
 
-    if (error.value) throw error.value
-    return data.value ?? null
-  }
+    async function getSkillsTrend(days = 60): Promise<TrendResponse<SkillTrendItem> | null> {
+        const { data, error } = await useApiFetch<TrendResponse<SkillTrendItem>>(`${BASE_URL}/skills`, {
+            method: 'GET',
+            query: { days },
+        });
+        if (error.value) throw error.value;
+        return data.value ?? null;
+    }
 
-  return { jobsdb }
+    return { getCategoryTrend, getSkillsTrend };
 }

@@ -85,7 +85,7 @@ const relatedValues = computed(() => props.result.related_skills?.map((x) => x.c
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <BarChart title="Top sub-categories ที่พบสกิลนี้" :labels="subcatLabels" :values="subcatValues" />
                 <p class="mt-2 text-sm text-slate-600">กราฟนี้แสดง “จำนวนงาน (count)” ที่มีสกิลนี้ แยกตาม sub-category</p>
@@ -95,6 +95,6 @@ const relatedValues = computed(() => props.result.related_skills?.map((x) => x.c
                 <BarChart title="สกิลที่มักเจอร่วมกัน (Related skills)" :labels="relatedLabels" :values="relatedValues" />
                 <p class="mt-2 text-sm text-slate-600">กราฟนี้แสดง “จำนวนงาน (count)” ที่พบสกิลอื่นร่วมกับสกิลหลัก ใน job เดียวกัน</p>
             </div>
-        </div>
+        </div> -->
     </div>
 </template>
