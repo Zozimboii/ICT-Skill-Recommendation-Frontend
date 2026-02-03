@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+    /* Custom dark background shade */
+    .bg-zinc-750 {
+        background-color: rgb(63 63 70);
+    }
+
+    /* Hide textarea controls and scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
+@layer components {
+    /* Suggestion Card */
+    .suggestion-card {
+        @apply shadow-none;
+        transition: all 0.2s ease;
+    }
+
+    .suggestion-card:hover {
+        transform: translateY(-1px);
+    }
+
+    .suggestion-card:active {
+        transform: translateY(0);
+    }
+}
+
+/* Hide all textarea default controls */
+textarea {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+textarea::-webkit-resizer {
+    display: none;
+}
+
+textarea::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide the menu button that appears in some browsers */
+textarea::-webkit-inner-spin-button,
+textarea::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+textarea::placeholder {
+    opacity: 0.5;
+}

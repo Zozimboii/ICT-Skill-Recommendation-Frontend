@@ -19,7 +19,9 @@ const fetchAllJobCounts = async () => {
     error.value = null;
 
     try {
-        result.value = await search(q);
+        const res = await search(q);
+        console.log('API Response:', res);
+        result.value = res;
     } catch (err: any) {
         error.value = err?.data?.detail || (err?.message ? `Failed to fetch job counts: ${err.message}` : 'Failed to fetch job counts');
         console.error('Error fetching job counts:', err);

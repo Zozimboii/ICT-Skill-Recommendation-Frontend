@@ -40,11 +40,9 @@ const isFullWidthPage = computed(() => {
 
                     <NuxtLink v-if="isLoggedIn" to="/trend" class="font-bold text-base rounded-lg px-3 py-2 hover:text-indigo-300"> Trend </NuxtLink>
 
-                    <NuxtLink v-if="isLoggedIn" to="/advisor" class="font-bold text-base rounded-lg px-3 py-2 hover:text-indigo-300"> SearchJob </NuxtLink>
+                    <NuxtLink v-if="isLoggedIn" to="/searchJob" class="font-bold text-base rounded-lg px-3 py-2 hover:text-indigo-300"> SearchJob </NuxtLink>
 
                     <NuxtLink v-if="isLoggedIn" to="/assessment" class="font-bold text-base rounded-lg px-3 py-2 hover:text-indigo-300"> Assessment </NuxtLink>
-
-                    <NuxtLink to="/chat" class="rounded-lg px-3 py-2 text-base font-bold hover:text-indigo-300"> Chat </NuxtLink>
 
                     <template v-if="!isLoggedIn">
                         <NuxtLink to="/login" class="rounded-lg px-3 py-2 font-bold hover:text-slate-700"> Login </NuxtLink>
@@ -58,7 +56,7 @@ const isFullWidthPage = computed(() => {
         </header>
 
         <main class="flex-1 flex items-center justify-center px-4 pt-32 pb-10">
-            <div :class="[isFullWidthPage ? 'max-w-[1600px] w-full' : 'max-w-5xl w-full']">
+            <div :class="[' w-full']">
                 <slot />
             </div>
         </main>

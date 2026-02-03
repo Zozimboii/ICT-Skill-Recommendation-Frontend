@@ -4,7 +4,13 @@ import { Chart, RadarController, RadialLinearScale, PointElement, LineElement, F
 
 Chart.register(RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
-type Dataset = { label: string; data: number[] };
+type Dataset = {
+    label: string;
+    data: number[];
+    borderColor?: string;
+    backgroundColor?: string;
+    pointBackgroundColor?: string;
+};
 
 const props = defineProps<{
     labels: string[];
@@ -22,11 +28,36 @@ const render = () => {
         type: 'radar',
         data: {
             labels: props.labels,
-            datasets: props.datasets.map((d) => ({
-                label: d.label,
-                data: d.data,
-                fill: true,
-            })),
+            datasets: props.datasets.map((d, index) => {
+                const colors = [
+                    {
+                        border: '#2563eb',
+                        bg: 'rgba(37, 99, 235, 0.25)',
+                    },
+                    {
+                        border: '#f97316',
+                        bg: 'rgba(249, 115, 22, 0.25)',
+                    },
+                ];
+
+                return {
+                    label: d.label,
+                    data: d.data,
+                    fill: true,
+
+                    // ✅ สีของเส้น
+                    borderColor: colors[index]?.border,
+
+                    // ✅ สีพื้น
+                    backgroundColor: colors[index]?.bg,
+
+                    // ✅ จุด
+                    pointBackgroundColor: colors[index]?.border,
+
+                    // ความหนา
+                    borderWidth: 2,
+                };
+            }),
         },
         options: {
             responsive: true,
@@ -34,7 +65,9 @@ const render = () => {
                 r: {
                     suggestedMin: 0,
                     suggestedMax: 100,
-                    ticks: { stepSize: 20 },
+                    ticks: {
+                        stepSize: 20,
+                    },
                 },
             },
         },
