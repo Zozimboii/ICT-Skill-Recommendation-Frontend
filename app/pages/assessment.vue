@@ -77,7 +77,7 @@ const normalizeJob = (skills: PositionSkill[]) => skills.map((s) => ({ skill_nam
 const labels = computed(() => {
     const u = normalizeUser(userSkills.value).map((x) => x.skill_name);
     const j = normalizeJob(jobProfile.value).map((x) => x.skill_name);
-    return Array.from(new Set([...u, ...j]));
+    return Array.from(new Set([...u, ...j])).slice(0, 15);
 });
 
 const userData = computed(() => {
@@ -156,18 +156,36 @@ const demandsMap = computed(() => {
             <div class="text-slate-500">Jobs ที่ใช้คำนวณ: {{ profile.total_jobs }}</div>
         </div>
 
-        <SkillRatingForm v-model="userSkills" :demands="demandsMap" />
+        <!-- ✅ Show แบบทดสอบเฉพาะตอนเลือกตำแหน่งแล้ว -->
+        <div v-if="jobProfile.length > 0" class="space-y-6">
+            <SkillRatingForm v-model="userSkills" :demands="demandsMap" />
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RadarChart
-                :labels="labels"
-                :datasets="[
-                    { label: 'คุณ', data: userData },
-                    { label: 'ตำแหน่งงาน', data: jobData },
-                ]"
-            />
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ClientOnly>
+                    <RadarChart
+                        :labels="labels"
+                        :datasets="[
+                            {
+                                label: 'คุณ',
+                                data: userData,
+                                borderColor: '#2563eb',
+                                backgroundColor: 'rgba(37, 99, 235, 0.3)',
+                                pointBackgroundColor: '#2563eb',
+                            },
+                            {
+                                label: 'ตำแหน่งงาน',
+                                data: jobData,
+                                borderColor: '#f97316',
+                                backgroundColor: 'rgba(249, 115, 22, 0.25)',
+                                pointBackgroundColor: '#f97316',
+                            },
+                        ]"
+                    />
+                </ClientOnly>
 
-            <MatchSummary :matchPercent="matchPercent" :gaps="gaps" :hasProfile="jobProfile.length > 0" :topDemands="topDemands" />
+                <MatchSummary :matchPercent="matchPercent" :gaps="gaps" :hasProfile="jobProfile.length > 0" :topDemands="topDemands" />
+            </div>
         </div>
+        <div v-else>กรุณาเลือกตำแหน่งงานก่อน</div>
     </div>
 </template>

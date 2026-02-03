@@ -191,7 +191,7 @@ onMounted(() => fetchAllTrends(selectedDays.value));
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 py-10 px-6">
+    <div class="min-h-screen py-10 px-6">
         <div class="max-w-[1600px] mx-auto space-y-10">
             <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                 <h1 class="text-3xl font-black text-slate-800">Skill Trends</h1>
