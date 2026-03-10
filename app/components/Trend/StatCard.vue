@@ -1,4 +1,4 @@
-<!-- StatCard.vue -->
+<!--components/Trend/StatCard.vue -->
 
 <script setup>
 import { computed } from 'vue';

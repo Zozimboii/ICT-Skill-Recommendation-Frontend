@@ -1,3 +1,4 @@
+// composables/useJob.ts
 import type { Ref } from 'vue';
 
 const BASE_URL = '/api/v1/jobs';

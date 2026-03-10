@@ -1,3 +1,4 @@
+// types/Trend.ts
 // export interface TrendJobsdbItem {
 //     job_count: number;
 //     sub_category_id: number;

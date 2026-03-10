@@ -1,3 +1,4 @@
+// types/Auth.ts
 export interface LoginPayload {
     email: string;
     password: string;

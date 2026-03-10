@@ -1,4 +1,4 @@
-<!-- DrillDownChart.vue -->
+<!--components/Trend/DrillDownChart.vue -->
 <script setup>
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';

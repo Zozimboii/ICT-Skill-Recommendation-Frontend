@@ -1,4 +1,4 @@
-<!-- components/SankeyChart.vue -->
+<!--components/Trend/SankeyChart.vue -->
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 

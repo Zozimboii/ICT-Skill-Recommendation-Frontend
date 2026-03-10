@@ -1,3 +1,4 @@
+<!-- components/Assessment/PositionPicker.vue -->
 <script setup lang="ts">
 import type { PositionItem } from '~/types/PositionProfile';
 

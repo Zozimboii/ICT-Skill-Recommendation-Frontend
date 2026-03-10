@@ -1,3 +1,4 @@
+<!--components/Trend/SkillBlockPanel.vue -->
 <!-- <script setup lang="ts">
 defineProps<{
     skills: { id: number; name: string; job_count: number }[];
@@ -49,6 +50,7 @@ const emit = defineEmits<{
         </div>
     </div>
 </template> -->
+
 <script setup lang="ts">
 defineProps<{
     skills: { id: number; name: string; job_count: number }[];

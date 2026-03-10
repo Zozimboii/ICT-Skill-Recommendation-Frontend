@@ -1,3 +1,4 @@
+<!-- components/SkillSearchBar.vue -->
 <script setup lang="ts">
 const props = defineProps<{
     modelValue: string;

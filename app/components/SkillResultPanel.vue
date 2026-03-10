@@ -1,3 +1,4 @@
+<!-- components/SkillResultPanel.vue -->
 <script setup lang="ts">
 import type { SkillSearchResponse } from '~/types/SkillSearchResponse';
 

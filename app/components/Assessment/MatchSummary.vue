@@ -1,3 +1,4 @@
+<!-- components/Assessment/MatchSummary.vue -->
 <script setup lang="ts">
 type Gap = { name: string; gap: number };
 type Demand = { skill_name: string; weight: number; demand_label?: string; demand_level?: 'HIGH' | 'MEDIUM' | 'LOW' };

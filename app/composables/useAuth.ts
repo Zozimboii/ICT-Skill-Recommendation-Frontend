@@ -1,78 +1,29 @@
-// // app/composables/useAuth.ts
-
-// import type { AuthResponse, LoginPayload, RegisterPayload } from '~/types/Auth';
-
-// const BASE_URL = '/api/v1/auth';
-
-// export function useAuth() {
-//     const token = useState<string | null>('token', () => null);
-
-//     if (process.client) {
-//         token.value = localStorage.getItem('token');
-//     }
-
-//     const isLoggedIn = computed(() => !!token.value);
-
-//     // ✅ Login
-//     async function login(payload: LoginPayload): Promise<AuthResponse> {
-//         const { data, error } = await useApiFetch<AuthResponse>(`${BASE_URL}/login`, {
-//             method: 'POST',
-//             body: payload,
-//         });
-//         if (error.value) throw error.value;
-
-//         const res = data.value;
-//         if (!res) throw new Error('No response from server');
-
-//         const t = res.access_token || res.token;
-//         if (!t) throw new Error('No token in response');
-
-//         token.value = t;
-//         localStorage.setItem('token', t);
-//         return res;
-//     }
-
-//     // ✅ Register (เพิ่มใหม่)
-//     async function register(payload: RegisterPayload): Promise<any> {
-//         const { data, error } = await useApiFetch(`${BASE_URL}/register`, {
-//             method: 'POST',
-//             body: payload,
-//         });
-
-//         if (error.value) {
-//             // ดึง Error จาก Backend มาโยนต่อ
-//             throw error.value;
-//         }
-//         return data.value;
-//     }
-
-//     function logout() {
-//         token.value = null;
-//         localStorage.removeItem('token');
-//         navigateTo('/login');
-//     }
-
-//     return {
-//         token,
-//         isLoggedIn,
-//         login,
-//         register, // อย่าลืม export ออกไปใช้
-//         logout,
-//     };
-// }
 // composables/useAuth.ts
 import type { AuthResponse, LoginPayload, RegisterPayload } from '~/types/Auth';
 
 const BASE_URL = '/api/v1/auth';
 
 export function useAuth() {
-    // ใช้ useCookie แทน localStorage เพื่อให้ Server-side รู้จัก token ด้วย
-    const token = useCookie<string | null>('token', {
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        watch: true,
-    });
+    // useCookie อ่านค่าได้ทั้ง SSR + client หลัง F5
+    const tokenCookie = useCookie<string | null>('auth_token', { maxAge: 60 * 60 * 24 * 7 });
+    const roleCookie = useCookie<string | null>('auth_role', { maxAge: 60 * 60 * 24 * 7 });
+
+    // useState ใช้ cookie เป็น initial value → share ทั้งแอป
+    const token = useState<string | null>('auth:token', () => tokenCookie.value ?? null);
+    const role = useState<string | null>('auth:role', () => roleCookie.value ?? null);
 
     const isLoggedIn = computed(() => !!token.value);
+    const isAdmin = computed(() => role.value === 'admin');
+
+    function setToken(t: string | null) {
+        token.value = t;
+        tokenCookie.value = t; // เขียน cookie ด้วยเพื่อให้อยู่หลัง F5
+    }
+
+    function setRole(r: string | null) {
+        role.value = r;
+        roleCookie.value = r;
+    }
 
     async function login(payload: LoginPayload): Promise<AuthResponse> {
         const { data, error } = await useApiFetch<AuthResponse>(`${BASE_URL}/login`, {
@@ -80,56 +31,42 @@ export function useAuth() {
             body: payload,
         });
 
-        // 1. ถ้ามี error จากการยิง API ให้ throw ทันที
-        if (error.value) {
-            throw error.value;
-        }
-
-        // 2. ตรวจสอบว่า data.value มีค่าไหม
-        // วิธีนี้จะช่วยให้ TypeScript มั่นใจว่า 'res' ไม่เป็น undefined หลังจากบรรทัดนี้
+        if (error.value) throw error.value;
         const res = data.value;
+        if (!res) throw new Error('No data received');
 
-        if (!res) {
-            throw new Error('No data received from server');
-        }
-
-        // 3. จัดการเรื่อง Token
         const t = res.access_token || res.token;
         if (t) {
-            token.value = t;
-            // หากใช้ useCookie ตามที่แนะนำก่อนหน้า มันจะบันทึกให้อัตโนมัติครับ
+            setToken(t);
+            try {
+                const parts = t.split('.');
+                if (parts.length === 3 && parts[1]) {
+                    const jwtPayload = JSON.parse(atob(parts[1]));
+                    if (jwtPayload.role) setRole(jwtPayload.role);
+                }
+            } catch {
+                /* ignore */
+            }
         }
 
-        // ตอนนี้ TypeScript จะยอมให้ return res แล้ว เพราะเรารองรับกรณี undefined ไปแล้วข้างบน
         return res;
     }
 
     function logout() {
-        token.value = null; // ลบ cookie
+        setToken(null);
+        setRole(null);
         navigateTo('/login');
     }
+
     async function register(payload: RegisterPayload) {
         const { data, error } = await useApiFetch(`${BASE_URL}/register`, {
             method: 'POST',
             body: payload,
         });
-
-        if (error.value) {
-            throw error.value;
-        }
-
-        if (!data.value) {
-            throw new Error('No data received from server');
-        }
-
+        if (error.value) throw error.value;
+        if (!data.value) throw new Error('No data received');
         return data.value;
     }
 
-    return {
-        token,
-        isLoggedIn,
-        login,
-        register,
-        logout,
-    };
+    return { token, role, isLoggedIn, isAdmin, login, register, logout };
 }

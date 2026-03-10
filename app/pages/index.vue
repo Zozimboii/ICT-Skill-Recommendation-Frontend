@@ -1,3 +1,4 @@
+<!-- pages/index.vue -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useTrend } from '@/composables/useTrend';
@@ -9,11 +10,15 @@ import SankeyChart from '@/components/Trend/SankeyChart.vue';
 const {
     jobTrend,
     loading,
+    sankeyLoading,
     error,
     selectedCategory,
     selectedSkillId,
     sankeyLinks,
+    sankeyLoaded,
+    loadInitial,
     loadAll,
+    fetchSankeyData,
     onCategoryClick,
     onSkillClick,
     clearFilter,
@@ -27,23 +32,16 @@ const {
     jobsBySkill,
 } = useTrend();
 
-interface JobItem {
-    id: number;
-    title: string;
-    company: string;
-    sub_category: string;
-}
-
-const selectedJobs = ref<JobItem[]>([]);
+const selectedJobs = ref<any[]>([]);
 const showModal = ref(false);
-const selectedSkillName = ref(''); // ✅ เก็บชื่อ skill
+const selectedSkillName = ref('');
+const sankeyRef = ref<HTMLElement | null>(null); // ref สำหรับ IntersectionObserver
 
 function capitalizeFirst(str: string) {
     if (!str) return str;
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// SkillTrendChart ส่ง (skillId, skillName) มา
 async function handleSkillClick(skillId: number, skillName: string) {
     selectedSkillName.value = capitalizeFirst(skillName ?? '');
     await fetchJobsBySkill(skillId);
@@ -51,28 +49,39 @@ async function handleSkillClick(skillId: number, skillName: string) {
     showModal.value = true;
 }
 
-// async function handleBlockSkillClick(skillId: number, skillName: string) {
-//     selectedSkillName.value = capitalizeFirst(skillName ?? '');
-//     onSkillClick(skillId);
-//     await fetchJobsBySkill(skillId);
-//     selectedJobs.value = jobsBySkill.value;
-//     showModal.value = true;
-// }
-
-// SkillBlockPanel ส่ง (skillId, skillName) มา
 async function handleBlockSkillClick(skillId: number, skillName: string) {
     selectedSkillName.value = capitalizeFirst(skillName ?? '');
     onSkillClick(skillId);
     await fetchJobsBySkill(skillId);
     selectedJobs.value = jobsBySkill.value;
-    // showModal.value = true;
 }
 
 async function onSankeyNodeClick(subCategory: string) {
     await onCategoryClick(subCategory);
 }
 
-onMounted(loadAll);
+onMounted(async () => {
+    await nextTick(); // รอให้ DOM พร้อมก่อน
+    await loadInitial(); // โหลดข้อมูล
+
+    // Sankey lazy load
+    await nextTick(); // รอให้ sankeyRef mount
+    const observer = new IntersectionObserver(
+        (entries) => {
+            if (entries[0]?.isIntersecting && !sankeyLoaded.value) {
+                fetchSankeyData(8, 4);
+                observer.disconnect();
+            }
+        },
+        { threshold: 0.1 },
+    );
+
+    if (sankeyRef.value) {
+        observer.observe(sankeyRef.value);
+    } else {
+        setTimeout(() => fetchSankeyData(8, 4), 800);
+    }
+});
 </script>
 
 <template>
@@ -96,7 +105,7 @@ onMounted(loadAll);
             </button>
         </div>
 
-        <!-- Loading -->
+        <!-- Loading (job + skill trend) -->
         <div v-if="loading && !jobTrend.length" class="flex flex-col items-center justify-center py-32 space-y-4 text-slate-500">
             <div class="w-12 h-12 border-4 rounded-full animate-spin" style="border-color: rgba(13, 95, 163, 0.2); border-top-color: #2a9fd6" />
             <p class="text-base font-medium animate-pulse">กำลังดึงข้อมูลล่าสุดจากระบบ...</p>
@@ -108,28 +117,40 @@ onMounted(loadAll);
         </div>
 
         <template v-else>
-            <!-- Row 1: Sankey full-width -->
             <ClientOnly>
-                <div class="rounded-2xl p-6" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                    <SankeyChart :links="sankeyLinks" @node-click="onSankeyNodeClick" />
-                </div>
-
-                <div v-if="selectedCategory || selectedSkillId" class="flex justify-end">
-                    <button class="text-xs px-3 py-1.5 rounded-lg border transition" style="border-color: rgba(76, 175, 80, 0.4); color: #4caf50" @click="clearFilter">Reset Filter</button>
-                </div>
-                <!-- Row 2: Bar chart + Skill block -->
+                <!-- Charts (โหลดแล้ว แสดงทันที) -->
                 <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="rounded-2xl p-6" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                        <JobTrendChart :series="jobChartSeries" :categories="jobChartCategories" :selected="selectedCategory ?? undefined" @category-click="onCategoryClick" />
+                        <JobTrendChart v-if="jobTrend.length" :series="jobChartSeries" :categories="jobChartCategories" :selected="selectedCategory ?? undefined" @category-click="onCategoryClick" />
                     </div>
                     <div class="rounded-2xl p-6" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
                         <SkillBlockPanel :skills="skillBlockData" :selectedSkillId="selectedSkillId" :selectedCategory="selectedCategory" @skill-click="handleBlockSkillClick" />
                     </div>
                 </section>
 
-                <!-- Row 3: Skill trend bar -->
                 <div class="rounded-2xl p-6" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
                     <SkillTrendChart :series="skillChartSeries" :categories="skillChartCategories" :skill-ids="skillChartIds" @skill-click="handleSkillClick" />
+                </div>
+
+                <!-- Sankey: lazy load เมื่อ scroll ถึง -->
+                <div ref="sankeyRef" class="rounded-2xl p-6 min-h-[160px]" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
+                    <!-- กำลังโหลด Sankey -->
+                    <div v-if="sankeyLoading" class="flex flex-col items-center justify-center py-14 gap-3 text-slate-500">
+                        <div class="w-8 h-8 border-4 rounded-full animate-spin" style="border-color: rgba(13, 95, 163, 0.2); border-top-color: #2a9fd6" />
+                        <p class="text-sm animate-pulse">กำลังโหลด Skill Map...</p>
+                    </div>
+                    <!-- รอ scroll ถึง -->
+                    <div v-else-if="!sankeyLoaded" class="flex flex-col items-center justify-center py-14 gap-2 text-slate-600">
+                        <p class="text-3xl">🗺️</p>
+                        <p class="text-sm">Skill Map</p>
+                    </div>
+                    <!-- แสดงผล -->
+                    <template v-else>
+                        <SankeyChart :links="sankeyLinks" @node-click="onSankeyNodeClick" />
+                        <div v-if="selectedCategory || selectedSkillId" class="flex justify-end mt-3">
+                            <button class="text-xs px-3 py-1.5 rounded-lg border transition" style="border-color: rgba(76, 175, 80, 0.4); color: #4caf50" @click="clearFilter">Reset Filter</button>
+                        </div>
+                    </template>
                 </div>
             </ClientOnly>
         </template>
@@ -164,12 +185,12 @@ onMounted(loadAll);
                                 class="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                                 style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 127, 212, 0.3); color: #5bc4f5"
                             >
-                                {{ job.company?.charAt(0) ?? '?' }}
+                                {{ job.company_name?.charAt(0) ?? '?' }}
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="font-semibold text-white text-base truncate">{{ job.title }}</p>
                                 <p class="text-base text-slate-400 mt-0.5">
-                                    <span class="text-slate-300">{{ job.company }}</span>
+                                    <span class="text-slate-300">{{ job.company_name }}</span>
                                     <span class="mx-1.5 text-slate-600">•</span>
                                     <span style="color: #4caf50">{{ job.sub_category }}</span>
                                 </p>

@@ -1,3 +1,4 @@
+<!--components/Trend/JobTrendChart.vue -->
 <script setup>
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';

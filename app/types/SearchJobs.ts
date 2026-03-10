@@ -1,13 +1,4 @@
-// import type { RelatedSubCategory } from "./RelatedSubCategory"
-// import type { TopCategory } from "./TopCategory"
-
-// export interface SearchJobsResult {
-//   sub_category_id: number | string
-//   sub_category_name: string
-//   job_count: number
-//   top_categories: TopCategory[]
-//   related_sub_categories: RelatedSubCategory[]
-// }
+// types/SearchJob.ts
 
 export interface SearchJobSummary {
     sub_category_id: number;
@@ -20,23 +11,21 @@ export interface SearchMeta {
     max_snapshot_date: string;
 }
 
-// export interface SearchJobItem {
-//   job_id: number
-//   job_title: string
-//   company_name: string
-//   location: string
-//   salary_min: number
-//   salary_max: number
-//   posted_date: string
-//   description: string
-// }
-
 export interface JobSkill {
     id: number;
     name: string;
     skill_type: 'hard_skill' | 'soft_skill';
 }
-
+export interface JobListItem {
+    id: number;
+    job_title: string; // ← ที่ SearchResultCard ใช้
+    company_name: string;
+    location: string | null;
+    description: string | null;
+    sub_category_name: string; // ← ที่ SearchResultCard ใช้
+    posted_date: string | null;
+    hard_skills: { skill_name: string }[]; // ← ที่ SearchResultCard ใช้
+}
 export interface Job {
     id: number;
     title: string;

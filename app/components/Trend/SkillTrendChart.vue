@@ -1,4 +1,4 @@
-<!-- SkillTrendChart.vue
+<!-- Components/Trend/SkillTrendChart.vue
 <script setup>
 import { computed } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';

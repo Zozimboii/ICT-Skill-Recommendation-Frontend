@@ -4,9 +4,11 @@ useHead({ title: 'Search Job — ICT Skill' });
 
 const { jobs, total, page, loading, error, searchMode, keyword, selectedSubCategory, subCategories, totalPages, fetchCategories, searchJobs, prevPage, nextPage } = useJobSearch();
 
-onMounted(() => {
+onMounted(async () => {
+    await nextTick();
     fetchCategories();
     searchJobs();
+    // ลบ searchJobs() ออก — ไม่โหลด jobs จนกว่า user จะกดค้นหา
 });
 </script>
 
@@ -57,7 +59,7 @@ onMounted(() => {
                     @keydown.enter="searchJobs()"
                 />
                 <button
-                    :disabled="loading"
+                    :disabled="loading || !keyword.trim()"
                     class="px-6 py-3 text-white rounded-xl font-semibold text-base disabled:opacity-50 transition-all"
                     style="background: linear-gradient(135deg, #0d5fa3 0%, #1a8c3e 100%)"
                     @click="searchJobs()"
@@ -72,7 +74,7 @@ onMounted(() => {
                     <label class="text-xs font-medium" style="color: #5bc4f5">ประเภทงาน</label>
                     <select
                         v-model="selectedSubCategory"
-                        class="w-full px-4 py-3 rounded-xl text-white outline-none text-base transition-all"
+                        class="w-full px-4 py-3 rounded-xl text-white outline-none text-base"
                         style="background: rgba(8, 18, 36, 0.9); border: 1px solid rgba(42, 127, 212, 0.2)"
                     >
                         <option value="all">-- ทุกประเภท --</option>
@@ -108,6 +110,13 @@ onMounted(() => {
             </div>
         </div>
 
+        <!-- Empty state: ยังไม่ได้ search -->
+        <div v-else-if="!jobs.length && !error" class="text-center py-20 text-slate-500">
+            <p class="text-5xl mb-4">🔍</p>
+            <p class="text-lg font-medium text-slate-400">พิมพ์คำค้นหาหรือเลือกประเภทงาน</p>
+            <p class="text-base mt-1">แล้วกด <span class="text-white font-semibold">ค้นหา</span> เพื่อดูผลลัพธ์</p>
+        </div>
+
         <!-- Job Cards -->
         <TransitionGroup v-else-if="jobs.length" name="list" tag="div" class="space-y-4">
             <div
@@ -122,18 +131,12 @@ onMounted(() => {
                     <h3 class="font-bold text-lg text-white leading-snug">{{ job.title }}</h3>
                     <span class="text-sm font-medium shrink-0" style="color: #4caf50">{{ job.posted_date }}</span>
                 </div>
-
                 <p class="font-semibold text-base mb-2" style="color: #2a9fd6">{{ job.sub_category }}</p>
-
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-base text-slate-400 mb-3">
                     <span>🏢 {{ job.company_name }}</span>
                     <span>📍 {{ job.location ?? 'Bangkok' }}</span>
                 </div>
-
-                <p v-if="job.description" class="text-base text-slate-400 leading-relaxed mb-4 line-clamp-3">
-                    {{ job.description }}
-                </p>
-
+                <p v-if="job.description" class="text-base text-slate-400 leading-relaxed mb-4 line-clamp-3">{{ job.description }}</p>
                 <div v-if="job.skills?.length" class="flex flex-wrap gap-2">
                     <span
                         v-for="skill in job.skills"
@@ -148,7 +151,6 @@ onMounted(() => {
                         {{ skill.name }}
                     </span>
                 </div>
-
                 <a
                     v-if="job.url"
                     :href="job.url"
@@ -162,13 +164,6 @@ onMounted(() => {
                 </a>
             </div>
         </TransitionGroup>
-
-        <!-- Empty State -->
-        <div v-else class="text-center py-20 text-slate-500">
-            <p class="text-4xl mb-3">🔍</p>
-            <p class="text-lg font-medium">ไม่พบตำแหน่งงานที่ตรงกับคำค้นหา</p>
-            <p class="text-base mt-1">ลองเปลี่ยน keyword หรือเลือกหมวดหมู่ใหม่</p>
-        </div>
 
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="flex justify-center items-center gap-3 pt-4">

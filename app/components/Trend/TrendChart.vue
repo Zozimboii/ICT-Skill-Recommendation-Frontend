@@ -1,3 +1,4 @@
+<!-- components/Trend/TrendChart.vue
 <script setup lang="ts">
 import { onMounted, watch, ref } from 'vue';
 import { Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend, type ActiveElement } from 'chart.js';
@@ -91,4 +92,4 @@ watch(
 
         <SkillJobsModal :visible="modalVisible" :skillName="selectedSkill || ''" :jobs="relatedJobs" @close="modalVisible = false" />
     </div>
-</template>
+</template> -->

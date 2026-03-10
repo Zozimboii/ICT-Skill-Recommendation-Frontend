@@ -1,3 +1,4 @@
+<!--components/Trend/SkillJobModal.vue -->
 <script setup lang="ts">
 const props = defineProps<{
     skillName: string;

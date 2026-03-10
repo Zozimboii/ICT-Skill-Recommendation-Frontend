@@ -1,3 +1,4 @@
+// types/transcript.ts
 // export interface Course {
 //     course_code: string;
 //     course_name: string;

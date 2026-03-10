@@ -5,8 +5,6 @@ import MatchSummary from '~/components/Assessment/MatchSummary.vue';
 import RadarChart from '~/components/Charts/RadarChart.vue';
 
 import type { PositionItem, PositionSkill, PositionSkillsResponse, UserSkillScore } from '~/types/PositionProfile';
-import { usePosition } from '~/composables/usePositions';
-import { usePositionProfile } from '~/composables/usePositionProfile';
 
 const selectedPositionId = ref('');
 
@@ -21,8 +19,8 @@ const jobProfile = ref<PositionSkill[]>([]);
 const loadingProfile = ref(false);
 const profileError = ref<string | null>(null);
 
-const { list } = usePosition();
-const { getSkills } = usePositionProfile();
+const { list } = use();
+const { getSkills } = use();
 
 onMounted(async () => {
     positionsLoading.value = true;

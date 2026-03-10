@@ -1,3 +1,4 @@
+<!-- pages/transcript.vue -->
 <script setup lang="ts">
 import type { TranscriptDetail, ExtractedSkill, JobRecommendation } from '~/types/transcript';
 
@@ -33,7 +34,10 @@ const loadTranscript = async () => {
     loadingData.value = false;
 };
 
-onMounted(() => loadTranscript());
+onMounted(async () => {
+    await nextTick();
+    loadTranscript();
+});
 
 const fileInput = ref<HTMLInputElement | null>(null);
 

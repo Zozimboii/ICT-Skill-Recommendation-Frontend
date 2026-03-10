@@ -1,3 +1,4 @@
+# Dockerfile
 # STAGE 1: Build
 # FROM oven/bun:1 AS build
 # WORKDIR /app
@@ -50,6 +51,6 @@ EXPOSE 3000
 # ตั้งค่าให้ Nuxt รับการเชื่อมต่อจากภายนอก container
 ENV HOST=0.0.0.0
 ENV PORT=3000
-
+RUN bun run build
 # คำสั่งรัน
-CMD ["bun", "run", "dev"]
+CMD ["node", ".output/server/index.mjs"]

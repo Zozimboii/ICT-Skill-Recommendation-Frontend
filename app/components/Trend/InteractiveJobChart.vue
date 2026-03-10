@@ -1,3 +1,4 @@
+<!--components/Trend/InteractiveJobChart.vue -->
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
