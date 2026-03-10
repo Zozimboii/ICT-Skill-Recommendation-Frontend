@@ -1,12 +1,23 @@
+// // app/middleware/auth.global.ts
+// export default defineNuxtRouteMiddleware((to) => {
+//     const { isLoggedIn } = useAuth();
+
+//     const protectedPages = ['/assessment', '/transcript'];
+//     const requiresAuth = protectedPages.includes(to.path);
+
+//     if (requiresAuth && !isLoggedIn.value) {
+//         return navigateTo('/login');
+//     }
+// });
+// middleware/auth.ts
 // app/middleware/auth.global.ts
 export default defineNuxtRouteMiddleware((to) => {
-  const { isLoggedIn } = useAuth()
+    const { isLoggedIn } = useAuth();
 
-  // หน้าอนุญาตให้เข้าได้แม้ไม่ login
-  const publicPages = ['/login', '/register']
-  const isPublic = publicPages.includes(to.path)
+    const protectedPages = ['/assessment', '/transcript'];
+    const isProtected = protectedPages.some((path) => to.path.startsWith(path));
 
-  if (!isLoggedIn.value && !isPublic) {
-    return navigateTo('/login')
-  }
-})
+    if (isProtected && !isLoggedIn.value) {
+        return navigateTo('/login');
+    }
+});

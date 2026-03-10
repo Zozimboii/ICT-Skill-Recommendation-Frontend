@@ -1,19 +1,26 @@
+// types/PositionProfile.ts
+
+// ====== Position list ======
 export interface PositionItem {
     id: string;
     name: string;
-    main_category_id: number;
-    main_category_name: string;
     job_count: number;
+    main_category_id?: string | null;
+    main_category_name?: string | null;
 }
 
+// ====== Position Skill ======
 export interface PositionSkill {
     skill_name: string;
     count: number;
-    weight: number; // 0-100
+    weight: number;
+
+    // optional (เผื่ออนาคต)
     demand_level?: 'HIGH' | 'MEDIUM' | 'LOW';
     demand_label?: string;
 }
 
+// ====== Position Profile Response ======
 export interface PositionSkillsResponse {
     position_id: string;
     position_name: string;
@@ -21,22 +28,20 @@ export interface PositionSkillsResponse {
     skills: PositionSkill[];
 }
 
+// ====== User Score ======
 export interface UserSkillScore {
     skill_name: string;
     score: number; // 0-5
 }
 
-export interface GapItem {
-    skill_name: string;
-    gap: number;
-}
-
+// ====== Match Response ======
 export interface MatchResponse {
-    position_id: string;
-    position_name: string;
-    match_percent: number;
     labels: string[];
     user_data: number[];
     job_data: number[];
-    gaps: GapItem[];
+    match_percent: number;
+    gaps: {
+        skill_name: string;
+        gap: number;
+    }[];
 }

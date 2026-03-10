@@ -1,18 +1,47 @@
-import type { UseFetchOptions } from 'nuxt/app'
+// composables/useApiFetch.ts
+// export function useApiFetch<T>(path: string, options: any = {}) {
+//     const config = useRuntimeConfig();
+//     const { token } = useAuth(); // ดึง token state มาจาก useAuth
 
-export function useApiFetch<T>(path: string, options: UseFetchOptions<T> = {}) {
-  const config = useRuntimeConfig()
-  const token = useCookie<string | null>('token', { sameSite: 'lax' })
+//     // ใช้ defu หรือ merge headers
+//     const headers = {
+//         ...options.headers,
+//         ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+//     };
 
-  // ทำ headers ให้เป็น object ชัด ๆ ก่อน (หลีกเลี่ยง type แดง)
-  const mergedHeaders: Record<string, string> = {
-    ...(options.headers as any),
-    ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
-  }
+//     return useFetch<T>(path, {
+//         ...options,
+//         baseURL: config.public.apiBase,
+//         headers,
+//         // แนะนำเพิ่มเติม: จัดการ error global ที่นี่ได้เลย
+//         onResponseError({ response }) {
+//             if (response.status === 401) {
+//                 // ถ้า token หมดอายุ ให้ logout
+//                 const { logout } = useAuth();
+//                 logout();
+//             }
+//         },
+//     });
+// }
 
-  return useFetch<T>(path, {
-    ...options as any,
-    baseURL: config.public.apiBase,
-    headers: mergedHeaders as any,
-  })
+export function useApiFetch<T>(path: string, options: any = {}) {
+    const config = useRuntimeConfig();
+    const { token } = useAuth();
+
+    const headers = {
+        ...options.headers,
+        ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+    };
+
+    return useFetch<T>(path, {
+        ...options,
+        baseURL: config.public.apiBase,
+        headers,
+        onResponseError({ response }) {
+            if (response.status === 401) {
+                const { logout } = useAuth();
+                logout();
+            }
+        },
+    });
 }

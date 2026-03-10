@@ -5,8 +5,6 @@ import MatchSummary from '~/components/Assessment/MatchSummary.vue';
 import RadarChart from '~/components/Charts/RadarChart.vue';
 
 import type { PositionItem, PositionSkill, PositionSkillsResponse, UserSkillScore } from '~/types/PositionProfile';
-import { usePosition } from '~/composables/usePositions';
-import { usePositionProfile } from '~/composables/usePositionProfile';
 
 const selectedPositionId = ref('');
 
@@ -21,8 +19,8 @@ const jobProfile = ref<PositionSkill[]>([]);
 const loadingProfile = ref(false);
 const profileError = ref<string | null>(null);
 
-const { list } = usePosition();
-const { getSkillsId } = usePositionProfile();
+const { list } = use();
+const { getSkills } = use();
 
 onMounted(async () => {
     positionsLoading.value = true;
@@ -54,14 +52,37 @@ const handlePositionChange = async (id: string) => {
     profileError.value = null;
     profile.value = null;
     jobProfile.value = [];
+
     if (!id) return;
 
     loadingProfile.value = true;
+
     try {
-        const res = await getSkillsId(id); // PositionSkillsResponse
+        const res = await getSkills(id);
+
         profile.value = res;
-        jobProfile.value = res?.skills ?? []; //  set ก่อน
-        ensureUserSkillsFromProfile(jobProfile.value); // แล้วค่อย auto สร้างฟอร์ม
+
+        // ✅ แปลง demand_level ตรงนี้
+        jobProfile.value = (res?.skills ?? []).map((s) => {
+            let level: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+            let label = 'ต่ำ';
+
+            if (s.weight >= 70) {
+                level = 'HIGH';
+                label = 'สูง';
+            } else if (s.weight >= 40) {
+                level = 'MEDIUM';
+                label = 'กลาง';
+            }
+
+            return {
+                ...s,
+                demand_level: level,
+                demand_label: label,
+            };
+        });
+
+        ensureUserSkillsFromProfile(jobProfile.value);
     } catch (e: any) {
         profileError.value = e?.data?.detail || e?.message || 'Load position profile failed';
     } finally {

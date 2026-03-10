@@ -1,3 +1,4 @@
+<!-- components/Assessment/SkillRatingForm.vue -->
 <script setup lang="ts">
 import type { SkillScore } from '~/types/SkillScore';
 import type { PositionSkill } from '~/types/PositionProfile';
