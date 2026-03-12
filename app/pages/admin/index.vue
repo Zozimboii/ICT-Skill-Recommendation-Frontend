@@ -20,16 +20,17 @@ const loading = ref(true);
 const actionLoading = ref(false);
 const toast = ref<{ msg: string; type: 'ok' | 'err' } | null>(null);
 
-// New skill form
 const newSkillName = ref('');
 const newSkillType = ref<'hard_skill' | 'soft_skill'>('hard_skill');
-
-// Job search
 const jobKeyword = ref('');
+
+// ── Scrape progress state ─────────────────────────────────────────
+const scraping = ref(false);
+const scrapeProgress = ref<{ before: number; current: number; done: boolean } | null>(null);
 
 const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     toast.value = { msg, type };
-    setTimeout(() => (toast.value = null), 3000);
+    setTimeout(() => (toast.value = null), 3500);
 };
 
 const loadAll = async () => {
@@ -109,22 +110,49 @@ const handleDeleteSkill = async (skill: AdminSkillItem) => {
     }
 };
 
+// ── Scrape + Polling ──────────────────────────────────────────────
 const handleScrape = async () => {
     if (!confirm('เริ่ม scrape งานใหม่ 50 ตำแหน่ง?')) return;
+
+    scraping.value = true;
     actionLoading.value = true;
+    const before = stats.value?.total_jobs ?? 0;
+    scrapeProgress.value = { before, current: before, done: false };
+
+    // poll ทุก 3s — อัปเดต job count แบบ real-time
+    const poll = setInterval(async () => {
+        const s = await getStats();
+        if (s && scrapeProgress.value) {
+            scrapeProgress.value.current = s.total_jobs;
+            stats.value = s;
+        }
+    }, 3000);
+
     try {
-        const res = await triggerScrape(50);
-        showToast(res?.message ?? 'Scrape เสร็จ');
-        await loadAll();
+        const res = await triggerScrape(1);
+        clearInterval(poll);
+
+        // โหลดข้อมูลใหม่ทั้งหมด
+        await loadAll(); // ← เพิ่มตรงนี้แทนการเรียก getStats/getJobs แยก
+
+        const added = (stats.value?.total_jobs ?? before) - before;
+        scrapeProgress.value = { before, current: stats.value?.total_jobs ?? before, done: true };
+        showToast(`✅ Scrape เสร็จ `);
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     } catch {
+        clearInterval(poll);
+        scrapeProgress.value = null;
         showToast('Scrape ไม่สำเร็จ', 'err');
     } finally {
+        scraping.value = false;
         actionLoading.value = false;
     }
 };
 
 onMounted(async () => {
-    await nextTick(); // รอให้ useState sync จาก cookie ก่อน
+    await nextTick();
     loadAll();
 });
 </script>
@@ -140,10 +168,28 @@ onMounted(async () => {
                 style="background: linear-gradient(135deg, #0d5fa3, #1a8c3e)"
                 @click="handleScrape"
             >
-                <span :class="actionLoading ? 'animate-spin' : ''">⚙️</span>
-                Scrape งานใหม่
+                <span :class="scraping ? 'animate-spin' : ''">⚙️</span>
+                {{ scraping ? 'กำลัง Scrape…' : 'Scrape งานใหม่' }}
             </button>
         </div>
+
+        <!-- Scrape Progress Banner -->
+        <Transition name="fade">
+            <div
+                v-if="scrapeProgress"
+                class="rounded-2xl px-5 py-4 space-y-2"
+                :style="scrapeProgress.done ? 'background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.25)' : 'background:rgba(13,95,163,0.08);border:1px solid rgba(42,127,212,0.25)'"
+            >
+                <div class="w-full h-2 rounded-full overflow-hidden" style="background: rgba(42, 127, 212, 0.12)">
+                    <div v-if="scrapeProgress.done" class="h-2 rounded-full w-full" style="background: linear-gradient(90deg, #0d5fa3, #4caf50)" />
+                    <div v-else class="h-2 rounded-full scrape-indeterminate" style="background: linear-gradient(90deg, #0d5fa3, #4caf50); width: 40%" />
+                </div>
+                <p class="text-xs text-slate-500">
+                    Jobs ในระบบ: <span class="font-semibold text-white">{{ scrapeProgress.current.toLocaleString() }}</span>
+                    <span class="ml-2 text-slate-600">(ก่อน: {{ scrapeProgress.before.toLocaleString() }})</span>
+                </p>
+            </div>
+        </Transition>
 
         <!-- Toast -->
         <Transition name="fade">
@@ -195,7 +241,7 @@ onMounted(async () => {
                     ]"
                     :key="tab.key"
                     class="px-4 py-2 rounded-full text-sm font-semibold border transition-all"
-                    :style="activeTab === tab.key ? 'background: rgba(13,95,163,0.2); border-color: rgba(42,159,214,0.4); color: #5bc4f5;' : 'border-color: rgba(255,255,255,0.1); color: #94a3b8;'"
+                    :style="activeTab === tab.key ? 'background:rgba(13,95,163,0.2);border-color:rgba(42,159,214,0.4);color:#5bc4f5' : 'border-color:rgba(255,255,255,0.1);color:#94a3b8'"
                     @click="activeTab = tab.key as Tab"
                 >
                     {{ tab.label }}
@@ -230,8 +276,8 @@ onMounted(async () => {
                                     class="px-2.5 py-1 rounded-full text-xs font-semibold"
                                     :style="
                                         user.role === 'admin'
-                                            ? 'background: rgba(251,146,60,0.12); color:#fb923c; border:1px solid rgba(251,146,60,0.3)'
-                                            : 'background: rgba(42,127,212,0.1); color:#5bc4f5; border:1px solid rgba(42,127,212,0.25)'
+                                            ? 'background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3)'
+                                            : 'background:rgba(42,127,212,0.1);color:#5bc4f5;border:1px solid rgba(42,127,212,0.25)'
                                     "
                                 >
                                     {{ user.role }}
@@ -242,8 +288,8 @@ onMounted(async () => {
                                     class="px-2.5 py-1 rounded-full text-xs font-semibold"
                                     :style="
                                         user.is_active
-                                            ? 'background: rgba(76,175,80,0.1); color:#81c784; border:1px solid rgba(76,175,80,0.3)'
-                                            : 'background: rgba(239,68,68,0.08); color:#f87171; border:1px solid rgba(239,68,68,0.25)'
+                                            ? 'background:rgba(76,175,80,0.1);color:#81c784;border:1px solid rgba(76,175,80,0.3)'
+                                            : 'background:rgba(239,68,68,0.08);color:#f87171;border:1px solid rgba(239,68,68,0.25)'
                                     "
                                 >
                                     {{ user.is_active ? 'Active' : 'Inactive' }}
@@ -255,8 +301,8 @@ onMounted(async () => {
                                     class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-30"
                                     :style="
                                         user.is_active
-                                            ? 'background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25)'
-                                            : 'background:rgba(76,175,80,0.1); color:#81c784; border:1px solid rgba(76,175,80,0.3)'
+                                            ? 'background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25)'
+                                            : 'background:rgba(76,175,80,0.1);color:#81c784;border:1px solid rgba(76,175,80,0.3)'
                                     "
                                     @click="handleToggleUser(user)"
                                 >
@@ -273,13 +319,12 @@ onMounted(async () => {
 
             <!-- ── JOBS TAB ── -->
             <div v-if="activeTab === 'jobs'" class="space-y-4">
-                <!-- Search -->
                 <div class="flex gap-2">
                     <input
                         v-model="jobKeyword"
                         type="text"
                         placeholder="ค้นหาชื่องาน..."
-                        class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-sm transition-all"
+                        class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-sm"
                         style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)"
                         @keydown.enter="searchJobs"
                     />
@@ -288,7 +333,6 @@ onMounted(async () => {
                     </button>
                 </div>
                 <p class="text-sm text-slate-500">ทั้งหมด {{ jobTotal.toLocaleString() }} งาน</p>
-
                 <div class="rounded-2xl overflow-hidden" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
                     <table class="w-full text-sm">
                         <thead>
@@ -316,7 +360,7 @@ onMounted(async () => {
                                 <td class="px-5 py-4 text-center">
                                     <button
                                         :disabled="actionLoading"
-                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-30"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-30"
                                         style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25)"
                                         @click="handleDeleteJob(job)"
                                     >
@@ -334,7 +378,6 @@ onMounted(async () => {
 
             <!-- ── SKILLS TAB ── -->
             <div v-if="activeTab === 'skills'" class="space-y-4">
-                <!-- Add form -->
                 <div class="rounded-2xl p-5 flex flex-wrap gap-3 items-end" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
                     <div class="flex-1 min-w-[180px]">
                         <label class="text-xs uppercase tracking-widest font-semibold mb-1.5 block" style="color: #5bc4f5">Skill Name</label>
@@ -360,15 +403,13 @@ onMounted(async () => {
                     </div>
                     <button
                         :disabled="actionLoading || !newSkillName.trim()"
-                        class="px-5 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-all"
+                        class="px-5 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
                         style="background: linear-gradient(135deg, #0d5fa3, #1a8c3e)"
                         @click="handleAddSkill"
                     >
                         + เพิ่ม Skill
                     </button>
                 </div>
-
-                <!-- Skills table -->
                 <div class="rounded-2xl overflow-hidden" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
                     <table class="w-full text-sm">
                         <thead>
@@ -405,7 +446,7 @@ onMounted(async () => {
                                 <td class="px-5 py-3 text-center">
                                     <button
                                         :disabled="actionLoading || skill.job_count > 0"
-                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-30"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-30"
                                         :title="skill.job_count > 0 ? 'ไม่สามารถลบได้เพราะมี job ใช้อยู่' : ''"
                                         style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25)"
                                         @click="handleDeleteSkill(skill)"
@@ -426,6 +467,21 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.scrape-indeterminate {
+    animation: indeterminate 1.4s ease-in-out infinite;
+    transform-origin: left;
+}
+@keyframes indeterminate {
+    0% {
+        transform: translateX(-100%) scaleX(0.5);
+    }
+    50% {
+        transform: translateX(60%) scaleX(1.2);
+    }
+    100% {
+        transform: translateX(250%) scaleX(0.5);
+    }
+}
 .fade-enter-active,
 .fade-leave-active {
     transition:

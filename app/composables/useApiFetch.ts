@@ -1,36 +1,13 @@
 // composables/useApiFetch.ts
-// export function useApiFetch<T>(path: string, options: any = {}) {
-//     const config = useRuntimeConfig();
-//     const { token } = useAuth(); // ดึง token state มาจาก useAuth
-
-//     // ใช้ defu หรือ merge headers
-//     const headers = {
-//         ...options.headers,
-//         ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
-//     };
-
-//     return useFetch<T>(path, {
-//         ...options,
-//         baseURL: config.public.apiBase,
-//         headers,
-//         // แนะนำเพิ่มเติม: จัดการ error global ที่นี่ได้เลย
-//         onResponseError({ response }) {
-//             if (response.status === 401) {
-//                 // ถ้า token หมดอายุ ให้ logout
-//                 const { logout } = useAuth();
-//                 logout();
-//             }
-//         },
-//     });
-// }
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export function useApiFetch<T>(path: string, options: any = {}) {
     const config = useRuntimeConfig();
-    const { token } = useAuth();
+    const auth = useAuthStore();
 
     const headers = {
         ...options.headers,
-        ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+        ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
     };
 
     return useFetch<T>(path, {
@@ -39,8 +16,7 @@ export function useApiFetch<T>(path: string, options: any = {}) {
         headers,
         onResponseError({ response }) {
             if (response.status === 401) {
-                const { logout } = useAuth();
-                logout();
+                auth.logout();
             }
         },
     });

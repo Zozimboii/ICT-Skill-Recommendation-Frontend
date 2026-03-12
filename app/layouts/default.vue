@@ -1,10 +1,15 @@
 <!-- app/layouts/default.vue -->
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { useAuthStore } from '~/stores/useAuthStore';
 
-const { isLoggedIn, logout, role } = useAuth();
 const route = useRoute();
+const auth = useAuthStore();
+
+const { isLoggedIn, role } = storeToRefs(auth);
+const { logout } = auth;
 
 const scrolled = ref(false);
 const handleScroll = () => {
@@ -30,6 +35,7 @@ const navGroups = computed(() => {
             items: [
                 { to: '/transcript', label: 'Transcript', icon: '📄' },
                 { to: '/dashboard', label: 'Dashboard', icon: '🎯' },
+                { to: '/assessment', label: 'Assessment', icon: '🎯' },
             ],
         });
     }

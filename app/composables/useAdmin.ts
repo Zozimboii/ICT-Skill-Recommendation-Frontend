@@ -58,7 +58,7 @@ export function useAdmin() {
         if (error.value) throw error.value;
     }
 
-    async function triggerScrape(limit = 50): Promise<{ message: string; jobs_added: number } | null> {
+    async function triggerScrape(limit = 10): Promise<{ message: string; jobs_added: number } | null> {
         const { data, error } = await useApiFetch<{ message: string; jobs_added: number }>(`${BASE_URL}/scrape`, {
             method: 'POST',
             body: { limit },

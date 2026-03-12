@@ -1,13 +1,18 @@
 <!-- pages/searchJob.vue -->
 <script setup lang="ts">
 useHead({ title: 'Search Job — ICT Skill' });
-
+const route = useRoute();
 const { jobs, total, page, loading, error, searchMode, keyword, selectedSubCategory, subCategories, totalPages, fetchCategories, searchJobs, prevPage, nextPage } = useJobSearch();
 
 onMounted(async () => {
     await nextTick();
     fetchCategories();
-    searchJobs();
+
+    if (route.query.skill) {
+        searchMode.value = 'keyword';
+        keyword.value = String(route.query.skill);
+        searchJobs();
+    }
     // ลบ searchJobs() ออก — ไม่โหลด jobs จนกว่า user จะกดค้นหา
 });
 </script>
@@ -21,7 +26,25 @@ onMounted(async () => {
             <h2 class="font-bold text-xl text-white mb-0.5">ค้นหาข้อมูลตำแหน่งงาน</h2>
             <p class="text-base text-slate-400 mb-1">เลือกวิธีค้นหาที่ต้องการด้านล่าง</p>
             <p class="text-sm text-slate-500 mb-4">ข้อมูลอ้างอิงช่วงวันที่ {{ new Date().toLocaleDateString('th-TH') }}</p>
+            <div class="mb-4">
+                <p class="text-xs text-slate-400 mb-2">ค้นหายอดนิยม</p>
 
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="tag in ['Frontend', 'Backend', 'Data', 'DevOps', 'AI']"
+                        :key="tag"
+                        class="px-3 py-1.5 rounded-full text-xs font-medium transition"
+                        style="background: rgba(13, 95, 163, 0.15); color: #5bc4f5; border: 1px solid rgba(42, 127, 212, 0.2)"
+                        @click="
+                            keyword = tag;
+                            searchMode = 'keyword';
+                            searchJobs();
+                        "
+                    >
+                        {{ tag }}
+                    </button>
+                </div>
+            </div>
             <!-- Mode Toggle -->
             <div class="flex gap-2 mb-5">
                 <button
@@ -112,9 +135,21 @@ onMounted(async () => {
 
         <!-- Empty state: ยังไม่ได้ search -->
         <div v-else-if="!jobs.length && !error" class="text-center py-20 text-slate-500">
-            <p class="text-5xl mb-4">🔍</p>
-            <p class="text-lg font-medium text-slate-400">พิมพ์คำค้นหาหรือเลือกประเภทงาน</p>
-            <p class="text-base mt-1">แล้วกด <span class="text-white font-semibold">ค้นหา</span> เพื่อดูผลลัพธ์</p>
+            <div class="text-center py-20">
+                <p class="text-5xl mb-4">💼</p>
+
+                <p class="text-lg font-semibold text-white">เริ่มค้นหาตำแหน่งงาน</p>
+
+                <p class="text-sm text-slate-400 mt-1">ลองค้นหาเช่น</p>
+
+                <div class="flex justify-center gap-2 mt-3">
+                    <span class="px-3 py-1 text-xs rounded-full bg-white/5"> Frontend </span>
+
+                    <span class="px-3 py-1 text-xs rounded-full bg-white/5"> Python </span>
+
+                    <span class="px-3 py-1 text-xs rounded-full bg-white/5"> Data Analyst </span>
+                </div>
+            </div>
         </div>
 
         <!-- Job Cards -->
@@ -122,24 +157,28 @@ onMounted(async () => {
             <div
                 v-for="job in jobs"
                 :key="job.id"
-                class="rounded-2xl p-6 transition-all duration-200"
+                class="rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1"
                 style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)"
                 @mouseover="(e) => ((e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,159,214,0.35)')"
                 @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,127,212,0.15)')"
             >
-                <div class="flex justify-between items-start gap-4 mb-1">
-                    <h3 class="font-bold text-lg text-white leading-snug">{{ job.title }}</h3>
-                    <span class="text-sm font-medium shrink-0" style="color: #4caf50">{{ job.posted_date }}</span>
-                </div>
-                <p class="font-semibold text-base mb-2" style="color: #2a9fd6">{{ job.sub_category }}</p>
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-base text-slate-400 mb-3">
-                    <span>🏢 {{ job.company_name }}</span>
-                    <span>📍 {{ job.location ?? 'Bangkok' }}</span>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-bold text-lg text-white leading-snug">
+                            {{ job.title }}
+                        </h3>
+
+                        <p class="text-sm text-slate-400 mt-0.5">🏢 {{ job.company_name }} · 📍 {{ job.location ?? 'Bangkok' }}</p>
+                    </div>
+
+                    <span class="text-xs px-2 py-1 rounded-md" style="background: rgba(76, 175, 80, 0.12); color: #4caf50">
+                        {{ job.sub_category }}
+                    </span>
                 </div>
                 <p v-if="job.description" class="text-base text-slate-400 leading-relaxed mb-4 line-clamp-3">{{ job.description }}</p>
                 <div v-if="job.skills?.length" class="flex flex-wrap gap-2">
                     <span
-                        v-for="skill in job.skills"
+                        v-for="skill in job.skills.slice(0, 6)"
                         :key="skill.id"
                         class="px-3 py-1 text-xs font-medium rounded-full transition-colors"
                         :style="
@@ -150,17 +189,16 @@ onMounted(async () => {
                     >
                         {{ skill.name }}
                     </span>
+                    <span v-if="job.skills.length > 6" class="text-xs text-slate-500"> +{{ job.skills.length - 6 }} more </span>
                 </div>
                 <a
                     v-if="job.url"
                     :href="job.url"
                     target="_blank"
-                    class="inline-flex items-center gap-1 mt-3 text-xs font-medium transition-colors"
-                    style="color: #2a9fd6"
-                    @mouseover="(e) => ((e.currentTarget as HTMLElement).style.color = '#5bc4f5')"
-                    @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.color = '#2a9fd6')"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium mt-3 transition"
+                    style="background: #0d5fa3; color: white"
                 >
-                    ดูตำแหน่งงาน →
+                    ดูรายละเอียดงาน
                 </a>
             </div>
         </TransitionGroup>
@@ -175,7 +213,15 @@ onMounted(async () => {
             >
                 ← ก่อนหน้า
             </button>
-            <span class="text-base text-slate-400">หน้า {{ page }} / {{ totalPages }}</span>
+            <p class="text-sm text-slate-500">
+                Showing
+                {{ (page - 1) * 20 + 1 }}
+                -
+                {{ Math.min(page * 20, total) }}
+                of
+                {{ total }}
+                jobs
+            </p>
             <button
                 :disabled="page === totalPages || loading"
                 class="px-4 py-2 rounded-xl text-base font-medium text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"

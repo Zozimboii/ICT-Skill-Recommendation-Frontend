@@ -8,7 +8,7 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 
 watchEffect(() => {
-    if (isLoggedIn.value) navigateTo('/');
+    if (isLoggedIn) navigateTo('/');
 });
 
 const onSubmit = async () => {
