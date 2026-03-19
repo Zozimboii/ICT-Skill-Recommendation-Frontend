@@ -4,27 +4,21 @@ import { useAdmin } from '~/composables/useAdmin';
 import type { AdminStats, AdminUserItem, AdminJobItem, AdminSkillItem } from '~/types/Admin';
 
 useHead({ title: 'Admin — ICT Skill' });
-
 const { getStats, getUsers, toggleUser, getJobs, deleteJob, getSkills, createSkill, deleteSkill, triggerScrape } = useAdmin();
 
 type Tab = 'users' | 'jobs' | 'skills';
 const activeTab = ref<Tab>('users');
-
 const stats = ref<AdminStats | null>(null);
 const users = ref<AdminUserItem[]>([]);
 const jobs = ref<AdminJobItem[]>([]);
 const jobTotal = ref(0);
 const skills = ref<AdminSkillItem[]>([]);
-
 const loading = ref(true);
 const actionLoading = ref(false);
 const toast = ref<{ msg: string; type: 'ok' | 'err' } | null>(null);
-
 const newSkillName = ref('');
 const newSkillType = ref<'hard_skill' | 'soft_skill'>('hard_skill');
 const jobKeyword = ref('');
-
-// ── Scrape progress state ─────────────────────────────────────────
 const scraping = ref(false);
 const scrapeProgress = ref<{ before: number; current: number; done: boolean } | null>(null);
 
@@ -32,7 +26,6 @@ const showToast = (msg: string, type: 'ok' | 'err' = 'ok') => {
     toast.value = { msg, type };
     setTimeout(() => (toast.value = null), 3500);
 };
-
 const loadAll = async () => {
     loading.value = true;
     stats.value = await getStats();
@@ -43,13 +36,11 @@ const loadAll = async () => {
     skills.value = await getSkills();
     loading.value = false;
 };
-
 const searchJobs = async () => {
     const res = await getJobs({ keyword: jobKeyword.value || undefined });
     jobs.value = res.data;
     jobTotal.value = res.total;
 };
-
 const handleToggleUser = async (user: AdminUserItem) => {
     actionLoading.value = true;
     try {
@@ -65,7 +56,6 @@ const handleToggleUser = async (user: AdminUserItem) => {
         actionLoading.value = false;
     }
 };
-
 const handleDeleteJob = async (job: AdminJobItem) => {
     if (!confirm(`ลบ "${job.title}" ?`)) return;
     actionLoading.value = true;
@@ -80,7 +70,6 @@ const handleDeleteJob = async (job: AdminJobItem) => {
         actionLoading.value = false;
     }
 };
-
 const handleAddSkill = async () => {
     if (!newSkillName.value.trim()) return;
     actionLoading.value = true;
@@ -95,7 +84,6 @@ const handleAddSkill = async () => {
         actionLoading.value = false;
     }
 };
-
 const handleDeleteSkill = async (skill: AdminSkillItem) => {
     if (!confirm(`ลบ skill "${skill.name}" ?`)) return;
     actionLoading.value = true;
@@ -109,17 +97,12 @@ const handleDeleteSkill = async (skill: AdminSkillItem) => {
         actionLoading.value = false;
     }
 };
-
-// ── Scrape + Polling ──────────────────────────────────────────────
 const handleScrape = async () => {
-    if (!confirm('เริ่ม scrape งานใหม่ 50 ตำแหน่ง?')) return;
-
+    if (!confirm('เริ่ม scrape งานใหม่?')) return;
     scraping.value = true;
     actionLoading.value = true;
     const before = stats.value?.total_jobs ?? 0;
     scrapeProgress.value = { before, current: before, done: false };
-
-    // poll ทุก 3s — อัปเดต job count แบบ real-time
     const poll = setInterval(async () => {
         const s = await getStats();
         if (s && scrapeProgress.value) {
@@ -127,20 +110,13 @@ const handleScrape = async () => {
             stats.value = s;
         }
     }, 3000);
-
     try {
-        const res = await triggerScrape(1);
+        await triggerScrape(1);
         clearInterval(poll);
-
-        // โหลดข้อมูลใหม่ทั้งหมด
-        await loadAll(); // ← เพิ่มตรงนี้แทนการเรียก getStats/getJobs แยก
-
-        const added = (stats.value?.total_jobs ?? before) - before;
+        await loadAll();
         scrapeProgress.value = { before, current: stats.value?.total_jobs ?? before, done: true };
-        showToast(`✅ Scrape เสร็จ `);
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        showToast('Scrape เสร็จแล้ว');
+        setTimeout(() => window.location.reload(), 1500);
     } catch {
         clearInterval(poll);
         scrapeProgress.value = null;
@@ -150,7 +126,6 @@ const handleScrape = async () => {
         actionLoading.value = false;
     }
 };
-
 onMounted(async () => {
     await nextTick();
     loadAll();
@@ -161,32 +136,34 @@ onMounted(async () => {
     <div class="space-y-6">
         <!-- Header -->
         <div class="flex justify-between items-center flex-wrap gap-3">
-            <h1 class="text-3xl font-bold text-white">Admin</h1>
+            <h1 class="text-4xl font-bold text-white">Admin</h1>
             <button
                 :disabled="actionLoading"
-                class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all"
+                class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-base font-semibold text-white disabled:opacity-50 transition-all"
                 style="background: linear-gradient(135deg, #0d5fa3, #1a8c3e)"
                 @click="handleScrape"
             >
-                <span :class="scraping ? 'animate-spin' : ''">⚙️</span>
-                {{ scraping ? 'กำลัง Scrape…' : 'Scrape งานใหม่' }}
+                <svg :class="scraping ? 'animate-spin' : ''" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                </svg>
+                {{ scraping ? 'กำลัง Scrape...' : 'Scrape งานใหม่' }}
             </button>
         </div>
 
-        <!-- Scrape Progress Banner -->
+        <!-- Scrape progress -->
         <Transition name="fade">
             <div
                 v-if="scrapeProgress"
                 class="rounded-2xl px-5 py-4 space-y-2"
-                :style="scrapeProgress.done ? 'background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.25)' : 'background:rgba(13,95,163,0.08);border:1px solid rgba(42,127,212,0.25)'"
+                :style="scrapeProgress.done ? 'background:rgba(76,175,80,0.08); border:1px solid rgba(76,175,80,0.25)' : 'background:rgba(13,95,163,0.08); border:1px solid rgba(42,127,212,0.25)'"
             >
                 <div class="w-full h-2 rounded-full overflow-hidden" style="background: rgba(42, 127, 212, 0.12)">
                     <div v-if="scrapeProgress.done" class="h-2 rounded-full w-full" style="background: linear-gradient(90deg, #0d5fa3, #4caf50)" />
                     <div v-else class="h-2 rounded-full scrape-indeterminate" style="background: linear-gradient(90deg, #0d5fa3, #4caf50); width: 40%" />
                 </div>
-                <p class="text-xs text-slate-500">
+                <p class="text-base text-slate-300">
                     Jobs ในระบบ: <span class="font-semibold text-white">{{ scrapeProgress.current.toLocaleString() }}</span>
-                    <span class="ml-2 text-slate-600">(ก่อน: {{ scrapeProgress.before.toLocaleString() }})</span>
+                    <span class="ml-2 text-slate-400">(ก่อน: {{ scrapeProgress.before.toLocaleString() }})</span>
                 </p>
             </div>
         </Transition>
@@ -195,7 +172,7 @@ onMounted(async () => {
         <Transition name="fade">
             <div
                 v-if="toast"
-                class="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-semibold shadow-xl"
+                class="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-base font-semibold shadow-xl"
                 :style="toast.type === 'ok' ? 'background:#1a8c3e; color:#fff' : 'background:#b91c1c; color:#fff'"
             >
                 {{ toast.msg }}
@@ -210,24 +187,23 @@ onMounted(async () => {
         </div>
 
         <template v-else>
-            <!-- Stats -->
+            <!-- Stats — ไม่มี emote ใช้สีแทน -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div
                     v-for="card in [
-                        { icon: '👥', label: 'Users', value: stats?.total_users ?? 0 },
-                        { icon: '💼', label: 'Jobs', value: stats?.total_jobs ?? 0 },
-                        { icon: '🔧', label: 'Skills', value: stats?.total_skills ?? 0 },
-                        { icon: '📄', label: 'Transcripts', value: stats?.total_transcripts ?? 0 },
+                        { label: 'Users', value: stats?.total_users ?? 0, color: '#5bc4f5' },
+                        { label: 'Jobs', value: stats?.total_jobs ?? 0, color: '#4caf50' },
+                        { label: 'Skills', value: stats?.total_skills ?? 0, color: '#fbbf24' },
+                        { label: 'Transcripts', value: stats?.total_transcripts ?? 0, color: '#a78bfa' },
                     ]"
                     :key="card.label"
-                    class="rounded-2xl p-5 flex items-center gap-3"
+                    class="rounded-2xl p-5"
                     style="background: rgba(8, 18, 36, 0.7); border: 1px solid rgba(42, 127, 212, 0.15)"
                 >
-                    <span class="text-3xl">{{ card.icon }}</span>
-                    <div>
-                        <p class="text-2xl font-extrabold text-white">{{ card.value.toLocaleString() }}</p>
-                        <p class="text-xs uppercase tracking-widest text-slate-500">{{ card.label }}</p>
-                    </div>
+                    <p class="text-4xl font-extrabold text-white">{{ card.value.toLocaleString() }}</p>
+                    <p class="text-base uppercase tracking-widest mt-1 font-semibold" :style="`color:${card.color}`">
+                        {{ card.label }}
+                    </p>
                 </div>
             </div>
 
@@ -235,24 +211,24 @@ onMounted(async () => {
             <div class="flex gap-2">
                 <button
                     v-for="tab in [
-                        { key: 'users', label: '👥 Users' },
-                        { key: 'jobs', label: '💼 Jobs' },
-                        { key: 'skills', label: '🔧 Skills' },
+                        { key: 'users', label: 'ผู้ใช้งาน' },
+                        { key: 'jobs', label: 'งาน' },
+                        { key: 'skills', label: 'Skills' },
                     ]"
                     :key="tab.key"
-                    class="px-4 py-2 rounded-full text-sm font-semibold border transition-all"
-                    :style="activeTab === tab.key ? 'background:rgba(13,95,163,0.2);border-color:rgba(42,159,214,0.4);color:#5bc4f5' : 'border-color:rgba(255,255,255,0.1);color:#94a3b8'"
+                    class="px-4 py-2 rounded-full text-base font-semibold border transition-all"
+                    :style="activeTab === tab.key ? 'background:rgba(13,95,163,0.2); border-color:rgba(42,159,214,0.4); color:#5bc4f5' : 'border-color:rgba(255,255,255,0.1); color:#94a3b8'"
                     @click="activeTab = tab.key as Tab"
                 >
                     {{ tab.label }}
                 </button>
             </div>
 
-            <!-- ── USERS TAB ── -->
+            <!-- USERS -->
             <div v-if="activeTab === 'users'" class="rounded-2xl overflow-hidden" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                <table class="w-full text-sm">
+                <table class="w-full">
                     <thead>
-                        <tr class="text-xs uppercase tracking-widest text-slate-500" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
+                        <tr class="text-base uppercase tracking-widest text-slate-300" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
                             <th class="px-5 py-4 text-left font-semibold">ชื่อ</th>
                             <th class="px-5 py-4 text-left font-semibold">Email</th>
                             <th class="px-5 py-4 text-left font-semibold">Role</th>
@@ -264,7 +240,7 @@ onMounted(async () => {
                         <tr
                             v-for="user in users"
                             :key="user.id"
-                            class="transition-colors"
+                            class="transition-colors text-base"
                             style="border-bottom: 1px solid rgba(42, 127, 212, 0.06)"
                             @mouseover="(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(13,95,163,0.06)')"
                             @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')"
@@ -273,7 +249,7 @@ onMounted(async () => {
                             <td class="px-5 py-4 text-slate-400">{{ user.email }}</td>
                             <td class="px-5 py-4">
                                 <span
-                                    class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                    class="px-2.5 py-1 rounded-full text-base font-semibold"
                                     :style="
                                         user.role === 'admin'
                                             ? 'background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3)'
@@ -285,7 +261,7 @@ onMounted(async () => {
                             </td>
                             <td class="px-5 py-4 text-center">
                                 <span
-                                    class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                    class="px-2.5 py-1 rounded-full text-base font-semibold"
                                     :style="
                                         user.is_active
                                             ? 'background:rgba(76,175,80,0.1);color:#81c784;border:1px solid rgba(76,175,80,0.3)'
@@ -298,7 +274,7 @@ onMounted(async () => {
                             <td class="px-5 py-4 text-center">
                                 <button
                                     :disabled="actionLoading || user.role === 'admin'"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-30"
+                                    class="px-3 py-1.5 rounded-lg text-base font-semibold transition-all disabled:opacity-30"
                                     :style="
                                         user.is_active
                                             ? 'background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25)'
@@ -311,35 +287,35 @@ onMounted(async () => {
                             </td>
                         </tr>
                         <tr v-if="!users.length">
-                            <td colspan="5" class="px-5 py-10 text-center text-slate-500">ไม่พบข้อมูล</td>
+                            <td colspan="5" class="px-5 py-12 text-center text-base text-slate-300">ไม่พบข้อมูล</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- ── JOBS TAB ── -->
+            <!-- JOBS -->
             <div v-if="activeTab === 'jobs'" class="space-y-4">
                 <div class="flex gap-2">
                     <input
                         v-model="jobKeyword"
                         type="text"
                         placeholder="ค้นหาชื่องาน..."
-                        class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-sm"
+                        class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-base"
                         style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)"
                         @keydown.enter="searchJobs"
                     />
-                    <button class="px-5 py-3 rounded-xl text-sm font-semibold text-white" style="background: rgba(13, 95, 163, 0.3); border: 1px solid rgba(42, 127, 212, 0.3)" @click="searchJobs">
+                    <button class="px-5 py-3 rounded-xl text-base font-semibold text-white" style="background: rgba(13, 95, 163, 0.3); border: 1px solid rgba(42, 127, 212, 0.3)" @click="searchJobs">
                         ค้นหา
                     </button>
                 </div>
-                <p class="text-sm text-slate-500">ทั้งหมด {{ jobTotal.toLocaleString() }} งาน</p>
+                <p class="text-base text-slate-300">ทั้งหมด {{ jobTotal.toLocaleString() }} งาน</p>
                 <div class="rounded-2xl overflow-hidden" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                    <table class="w-full text-sm">
+                    <table class="w-full">
                         <thead>
-                            <tr class="text-xs uppercase tracking-widest text-slate-500" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
+                            <tr class="text-base uppercase tracking-widest text-slate-300" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
                                 <th class="px-5 py-4 text-left font-semibold">ชื่องาน</th>
                                 <th class="px-5 py-4 text-left font-semibold">บริษัท</th>
-                                <th class="px-5 py-4 text-left font-semibold">สาย</th>
+                                <th class="px-5 py-4 text-left font-semibold">สายงาน</th>
                                 <th class="px-5 py-4 text-center font-semibold">Skills</th>
                                 <th class="px-5 py-4 text-center font-semibold">ลบ</th>
                             </tr>
@@ -348,53 +324,53 @@ onMounted(async () => {
                             <tr
                                 v-for="job in jobs"
                                 :key="job.id"
-                                class="transition-colors"
+                                class="transition-colors text-base"
                                 style="border-bottom: 1px solid rgba(42, 127, 212, 0.06)"
                                 @mouseover="(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(13,95,163,0.06)')"
                                 @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')"
                             >
                                 <td class="px-5 py-4 text-white font-medium max-w-xs truncate">{{ job.title }}</td>
                                 <td class="px-5 py-4 text-slate-400 truncate">{{ job.company_name }}</td>
-                                <td class="px-5 py-4 text-sm" style="color: #4caf50">{{ job.sub_category ?? '-' }}</td>
+                                <td class="px-5 py-4 text-base" style="color: #4caf50">{{ job.sub_category ?? '-' }}</td>
                                 <td class="px-5 py-4 text-center text-slate-400">{{ job.skill_count }}</td>
                                 <td class="px-5 py-4 text-center">
                                     <button
                                         :disabled="actionLoading"
-                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-30"
+                                        class="px-3 py-1.5 rounded-lg text-base font-semibold disabled:opacity-30"
                                         style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25)"
                                         @click="handleDeleteJob(job)"
                                     >
-                                        🗑 ลบ
+                                        ลบ
                                     </button>
                                 </td>
                             </tr>
                             <tr v-if="!jobs.length">
-                                <td colspan="5" class="px-5 py-10 text-center text-slate-500">ไม่พบข้อมูล</td>
+                                <td colspan="5" class="px-5 py-12 text-center text-base text-slate-300">ไม่พบข้อมูล</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- ── SKILLS TAB ── -->
+            <!-- SKILLS -->
             <div v-if="activeTab === 'skills'" class="space-y-4">
                 <div class="rounded-2xl p-5 flex flex-wrap gap-3 items-end" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
                     <div class="flex-1 min-w-[180px]">
-                        <label class="text-xs uppercase tracking-widest font-semibold mb-1.5 block" style="color: #5bc4f5">Skill Name</label>
+                        <label class="text-base uppercase tracking-widest font-semibold mb-1.5 block" style="color: #5bc4f5"> Skill Name </label>
                         <input
                             v-model="newSkillName"
                             type="text"
                             placeholder="เช่น FastAPI"
-                            class="w-full px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-sm"
+                            class="w-full px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-base"
                             style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)"
                             @keydown.enter="handleAddSkill"
                         />
                     </div>
                     <div class="min-w-[140px]">
-                        <label class="text-xs uppercase tracking-widest font-semibold mb-1.5 block" style="color: #5bc4f5">Type</label>
+                        <label class="text-base uppercase tracking-widest font-semibold mb-1.5 block" style="color: #5bc4f5"> Type </label>
                         <select
                             v-model="newSkillType"
-                            class="w-full px-4 py-3 rounded-xl text-white outline-none text-sm"
+                            class="w-full px-4 py-3 rounded-xl text-white outline-none text-base"
                             style="background: rgba(8, 18, 36, 0.9); border: 1px solid rgba(42, 127, 212, 0.2)"
                         >
                             <option value="hard_skill">Hard Skill</option>
@@ -403,7 +379,7 @@ onMounted(async () => {
                     </div>
                     <button
                         :disabled="actionLoading || !newSkillName.trim()"
-                        class="px-5 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
+                        class="px-5 py-3 rounded-xl text-base font-semibold text-white disabled:opacity-40"
                         style="background: linear-gradient(135deg, #0d5fa3, #1a8c3e)"
                         @click="handleAddSkill"
                     >
@@ -411,9 +387,9 @@ onMounted(async () => {
                     </button>
                 </div>
                 <div class="rounded-2xl overflow-hidden" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                    <table class="w-full text-sm">
+                    <table class="w-full">
                         <thead>
-                            <tr class="text-xs uppercase tracking-widest text-slate-500" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
+                            <tr class="text-base uppercase tracking-widest text-slate-300" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
                                 <th class="px-5 py-4 text-left font-semibold">ชื่อ Skill</th>
                                 <th class="px-5 py-4 text-left font-semibold">Type</th>
                                 <th class="px-5 py-4 text-center font-semibold">Jobs ที่ใช้</th>
@@ -424,15 +400,15 @@ onMounted(async () => {
                             <tr
                                 v-for="skill in skills"
                                 :key="skill.id"
-                                class="transition-colors"
+                                class="transition-colors text-base"
                                 style="border-bottom: 1px solid rgba(42, 127, 212, 0.06)"
                                 @mouseover="(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(13,95,163,0.06)')"
                                 @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')"
                             >
-                                <td class="px-5 py-3 text-white font-medium">{{ skill.name }}</td>
-                                <td class="px-5 py-3">
+                                <td class="px-5 py-4 text-white font-medium">{{ skill.name }}</td>
+                                <td class="px-5 py-4">
                                     <span
-                                        class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                        class="px-2.5 py-1 rounded-full text-base font-semibold"
                                         :style="
                                             skill.skill_type === 'hard_skill'
                                                 ? 'background:rgba(42,127,212,0.1);color:#5bc4f5;border:1px solid rgba(42,127,212,0.25)'
@@ -442,21 +418,21 @@ onMounted(async () => {
                                         {{ skill.skill_type === 'hard_skill' ? 'Hard' : 'Soft' }}
                                     </span>
                                 </td>
-                                <td class="px-5 py-3 text-center text-slate-400">{{ skill.job_count }}</td>
-                                <td class="px-5 py-3 text-center">
+                                <td class="px-5 py-4 text-center text-slate-400">{{ skill.job_count }}</td>
+                                <td class="px-5 py-4 text-center">
                                     <button
                                         :disabled="actionLoading || skill.job_count > 0"
-                                        class="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-30"
+                                        class="px-3 py-1.5 rounded-lg text-base font-semibold disabled:opacity-30"
                                         :title="skill.job_count > 0 ? 'ไม่สามารถลบได้เพราะมี job ใช้อยู่' : ''"
                                         style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25)"
                                         @click="handleDeleteSkill(skill)"
                                     >
-                                        🗑 ลบ
+                                        ลบ
                                     </button>
                                 </td>
                             </tr>
                             <tr v-if="!skills.length">
-                                <td colspan="4" class="px-5 py-10 text-center text-slate-500">ไม่พบข้อมูล</td>
+                                <td colspan="4" class="px-5 py-12 text-center text-base text-slate-300">ไม่พบข้อมูล</td>
                             </tr>
                         </tbody>
                     </table>

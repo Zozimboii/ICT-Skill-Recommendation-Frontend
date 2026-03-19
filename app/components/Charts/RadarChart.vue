@@ -2,38 +2,45 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { Chart, RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from 'chart.js';
+import type { RadarDataset } from '~/types/Assessment';
 
 Chart.register(RadarController, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
-type Dataset = {
-    label: string;
-    data: number[];
-    borderColor?: string;
-    backgroundColor?: string;
-    pointBackgroundColor?: string;
-};
-
-const props = defineProps<{ labels: string[]; datasets: Dataset[] }>();
+const props = withDefaults(
+    defineProps<{
+        labels: string[];
+        datasets: RadarDataset[];
+        labelFontSize?: number; // font รอบ radar
+        showLegend?: boolean; // แสดง legend
+        compact?: boolean; // compact mode (dashboard radar)
+    }>(),
+    {
+        labelFontSize: 13,
+        showLegend: true,
+        compact: false,
+    },
+);
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
 
-const PALETTE = [
+const PALETTE: Array<{ border: string; bg: string; point: string }> = [
     { border: '#2a9fd6', bg: 'rgba(42,159,214,0.15)', point: '#2a9fd6' },
     { border: '#4caf50', bg: 'rgba(76,175,80,0.12)', point: '#4caf50' },
 ];
 
-const render = () => {
+function render() {
     if (!canvasRef.value) return;
-    if (chart) {
-        chart.destroy();
-        chart = null;
-    }
+    chart?.destroy();
+    chart = null;
+
+    // ตัด label ที่ยาวเกินให้พอดีใน compact mode
+    const displayLabels = props.labels.map((l) => (props.compact && l.length > 14 ? l.slice(0, 13) + '…' : l));
 
     chart = new Chart(canvasRef.value, {
         type: 'radar',
         data: {
-            labels: props.labels,
+            labels: displayLabels,
             datasets: props.datasets.map((d, i) => ({
                 label: d.label,
                 data: d.data,
@@ -42,8 +49,8 @@ const render = () => {
                 backgroundColor: d.backgroundColor ?? PALETTE[i % 2]!.bg,
                 pointBackgroundColor: d.pointBackgroundColor ?? PALETTE[i % 2]!.point,
                 pointBorderColor: 'transparent',
-                pointRadius: 4,
-                pointHoverRadius: 6,
+                pointRadius: props.compact ? 3 : 4,
+                pointHoverRadius: props.compact ? 5 : 6,
                 borderWidth: 2,
             })),
         },
@@ -58,7 +65,9 @@ const render = () => {
                         stepSize: 20,
                         color: 'rgba(148,163,184,0.6)',
                         backdropColor: 'transparent',
-                        font: { size: 10 },
+                        font: { size: props.compact ? 10 : 13 },
+                        // ซ่อน tick numbers ใน compact mode
+                        display: !props.compact,
                     },
                     grid: {
                         color: 'rgba(42,127,212,0.15)',
@@ -68,17 +77,20 @@ const render = () => {
                     },
                     pointLabels: {
                         color: '#94a3b8',
-                        font: { size: 11, weight: 'bold' },
+                        font: { size: props.labelFontSize, weight: 'bold' as const },
+                        // padding รอบ label
+                        padding: props.compact ? 4 : 8,
                     },
                 },
             },
             plugins: {
                 legend: {
+                    display: props.showLegend,
                     position: 'bottom',
                     labels: {
                         color: '#94a3b8',
-                        font: { size: 12 },
-                        padding: 16,
+                        font: { size: props.compact ? 12 : 14 },
+                        padding: props.compact ? 10 : 16,
                         usePointStyle: true,
                         pointStyleWidth: 8,
                     },
@@ -90,6 +102,8 @@ const render = () => {
                     titleColor: '#5bc4f5',
                     bodyColor: '#cbd5e1',
                     padding: 10,
+                    bodyFont: { size: 13 },
+                    titleFont: { size: 13 },
                     callbacks: {
                         label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}`,
                     },
@@ -97,10 +111,10 @@ const render = () => {
             },
         },
     });
-};
+}
 
 onMounted(render);
-watch(() => [props.labels, props.datasets], render, { deep: true });
+watch(() => [props.labels, props.datasets, props.compact], render, { deep: true });
 onBeforeUnmount(() => {
     chart?.destroy();
     chart = null;

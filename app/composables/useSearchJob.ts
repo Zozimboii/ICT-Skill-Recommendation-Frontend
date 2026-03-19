@@ -1,6 +1,4 @@
-// composables/useJobSearch.ts
-
-import type { Job, JobListResponse, JobSearchParams, SearchMode } from '~/types/SearchJobs';
+import type { Job, JobListResponse, SearchMode } from '~/types/SearchJobs';
 
 const BASE_URL = '/api/v1/jobs';
 
@@ -14,59 +12,84 @@ export const useJobSearch = () => {
     const searchMode = ref<SearchMode>('keyword');
     const keyword = ref('');
     const selectedSubCategory = ref('all');
-    const subCategories = ref<string[]>([]); // ← เปลี่ยนเป็น string[] ตรงๆ
+    const subCategories = ref<string[]>([]);
+
+    // 🔥 NEW: บอกว่า search จากอะไร
+    const searchMeta = ref<string[]>([]);
 
     const LIMIT = 20;
     const totalPages = computed(() => Math.ceil(total.value / LIMIT));
 
-    // ─── Fetch categories ──────────────────────────────────
     const fetchCategories = async () => {
-        const { data, error: fetchError } = await useApiFetch<any>(`${BASE_URL}/categories`);
-
-        if (fetchError.value) {
-            console.error('fetchCategories error:', fetchError.value);
-            return;
-        }
-        subCategories.value = data.value ?? [];
+        const { data, error: fetchError } = await useApiFetch<string[]>(`${BASE_URL}/categories`);
+        if (!fetchError.value) subCategories.value = data.value ?? [];
     };
 
-    // ─── Build query ───────────────────────────────────────
-    const buildQuery = (): JobSearchParams => {
-        const query: JobSearchParams = { page: page.value, limit: LIMIT };
+    function buildQuery() {
+        const query: any = {
+            page: page.value,
+            limit: LIMIT,
+        };
 
-        if (searchMode.value === 'keyword' && keyword.value.trim()) {
+        if (keyword.value?.trim()) {
             query.keyword = keyword.value.trim();
         }
 
-        if (searchMode.value === 'dropdown' && selectedSubCategory.value !== 'all') {
+        if (selectedSubCategory.value !== 'all') {
             query.sub_category = selectedSubCategory.value;
         }
 
         return query;
+    }
+
+    const detectSearchMeta = () => {
+        const kw = keyword.value.toLowerCase();
+        const meta: string[] = [];
+
+        // 🔥 heuristic ง่าย ๆ (ไม่ต้องรอ backend)
+        if (!kw) return [];
+
+        if (kw.includes('react') || kw.includes('python') || kw.includes('sql')) {
+            meta.push('Skill');
+        }
+
+        if (kw.includes('developer') || kw.includes('engineer') || kw.includes('analyst')) {
+            meta.push('ชื่องาน');
+        }
+
+        // default
+        if (!meta.length) {
+            meta.push('ชื่องาน', 'บริษัท', 'Skill');
+        }
+
+        return meta;
     };
 
-    // ─── Search jobs ───────────────────────────────────────
     const searchJobs = async (resetPage = true) => {
         if (resetPage) page.value = 1;
+
         loading.value = true;
         error.value = null;
 
-        const { data, error: fetchError } = await useApiFetch<JobListResponse>(`${BASE_URL}/search`, { query: buildQuery() });
+        const { data, error: fetchError } = await useApiFetch<JobListResponse>(`${BASE_URL}/search`, {
+            query: buildQuery(),
+        });
 
         if (fetchError.value) {
-            error.value = fetchError.value?.message ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+            error.value = fetchError.value.message;
             jobs.value = [];
             total.value = 0;
-            loading.value = false;
-            return;
+        } else {
+            jobs.value = data.value?.data ?? [];
+            total.value = data.value?.total ?? 0;
+
+            // 🔥 SET META
+            searchMeta.value = detectSearchMeta();
         }
 
-        jobs.value = data.value?.data ?? [];
-        total.value = data.value?.total ?? 0;
         loading.value = false;
     };
 
-    // ─── Pagination ────────────────────────────────────────
     const prevPage = async () => {
         if (page.value <= 1) return;
         page.value--;
@@ -79,17 +102,20 @@ export const useJobSearch = () => {
         await searchJobs(false);
     };
 
-    // ─── Reset ─────────────────────────────────────────────
     const reset = () => {
         keyword.value = '';
         selectedSubCategory.value = 'all';
         page.value = 1;
-        jobs.value = [];
-        total.value = 0;
-        error.value = null;
+        searchMeta.value = [];
     };
 
-    watch(searchMode, () => reset());
+    // let timeout: any;
+    // watch([keyword, selectedSubCategory], () => {
+    //     clearTimeout(timeout);
+    //     timeout = setTimeout(() => {
+    //         searchJobs();
+    //     }, 400);
+    // });
 
     return {
         jobs,
@@ -102,6 +128,7 @@ export const useJobSearch = () => {
         selectedSubCategory,
         subCategories,
         totalPages,
+        searchMeta, // 🔥 NEW
         fetchCategories,
         searchJobs,
         prevPage,

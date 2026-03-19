@@ -44,13 +44,6 @@ function glowColor(idx: number): string {
     return 'none';
 }
 
-function rankLabel(idx: number): string {
-    if (idx === 0) return '👑';
-    if (idx === 1) return '🥈';
-    if (idx === 2) return '🥉';
-    return String(idx + 1);
-}
-
 function rankTextColor(idx: number): string {
     if (idx === 0) return '#fbbf24';
     if (idx < 3) return '#4caf50';
@@ -74,14 +67,14 @@ const displayed = computed(() => (showAll.value ? items.value : items.value.slic
         <!-- Header -->
         <div class="flex items-start justify-between mb-5">
             <div>
-                <h3 class="text-lg font-bold text-white">Top {{ categories.length }} Skills ที่ตลาดต้องการ</h3>
-                <p class="text-xs mt-0.5" style="color: #475569">อ้างอิงจากประกาศงาน · คลิกที่ skill เพื่อดูรายชื่องาน</p>
+                <h3 class="text-xl font-bold text-white">Top {{ categories.length }} Skills ที่ตลาดต้องการ</h3>
+                <p class="text-sm mt-0.5" style="color: #475569">อ้างอิงจากประกาศงาน · คลิกที่ skill เพื่อดูรายชื่องาน</p>
             </div>
             <!-- Active filter chip -->
             <Transition name="fade">
                 <div
                     v-if="activeIdx !== null"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold shrink-0"
                     style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 159, 214, 0.35); color: #5bc4f5"
                 >
                     <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #5bc4f5" />
@@ -119,11 +112,10 @@ const displayed = computed(() => (showAll.value ? items.value : items.value.slic
                         color: rankTextColor(idx),
                     }"
                 >
-                    {{ rankLabel(idx) }}
                 </span>
 
                 <!-- Skill name -->
-                <span class="w-32 shrink-0 text-sm font-semibold truncate transition-colors" :style="activeIdx === idx ? 'color:#5bc4f5' : 'color:#cbd5e1'">
+                <span class="w-32 shrink-0 text-base font-semibold truncate transition-colors" :style="activeIdx === idx ? 'color:#5bc4f5' : 'color:#cbd5e1'">
                     {{ item.name }}
                 </span>
 
@@ -143,20 +135,20 @@ const displayed = computed(() => (showAll.value ? items.value : items.value.slic
                 </div>
 
                 <!-- Count badge -->
-                <span class="w-14 text-right shrink-0 text-xs font-bold tabular-nums" :style="activeIdx === idx ? 'color:#5bc4f5' : 'color:#475569'">
+                <span class="w-14 text-right shrink-0 text-sm font-bold tabular-nums" :style="activeIdx === idx ? 'color:#5bc4f5' : 'color:#475569'">
                     {{ item.count.toLocaleString() }}
-                    <span class="font-normal opacity-60 text-xs"> งาน</span>
+                    <span class="font-normal opacity-60 text-sm"> งาน</span>
                 </span>
 
                 <!-- Click hint arrow -->
-                <span class="shrink-0 text-xs opacity-0 group-hover:opacity-60 transition-opacity" style="color: #5bc4f5">→</span>
+                <span class="shrink-0 text-sm opacity-0 group-hover:opacity-60 transition-opacity" style="color: #5bc4f5">→</span>
             </div>
         </div>
 
         <!-- Show more / less -->
         <div v-if="items.length > LIMIT" class="mt-4 flex justify-center">
             <button
-                class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
                 style="border: 1px solid rgba(42, 127, 212, 0.2); color: #5bc4f5"
                 @click="showAll = !showAll"
                 @mouseover="(e) => ((e.currentTarget as HTMLElement).style.background = 'rgba(13,95,163,0.12)')"
@@ -164,23 +156,6 @@ const displayed = computed(() => (showAll.value ? items.value : items.value.slic
             >
                 <span>{{ showAll ? '▲ แสดงน้อยลง' : `▼ ดูทั้งหมด ${items.length} skills` }}</span>
             </button>
-        </div>
-
-        <!-- Legend -->
-        <div class="mt-4 pt-3 flex flex-wrap gap-4" style="border-top: 1px solid rgba(42, 127, 212, 0.1)">
-            <div
-                v-for="[label, color] in [
-                    ['👑 #1', '#fbbf24'],
-                    ['🥈🥉 Top 3', '#4caf50'],
-                    ['Top 10', '#2a9fd6'],
-                ]"
-                :key="label"
-                class="flex items-center gap-1.5 text-xs"
-                style="color: #475569"
-            >
-                <div class="w-3 h-2 rounded-sm" :style="`background:${color}`" />
-                {{ label }}
-            </div>
         </div>
     </div>
 </template>
@@ -236,7 +211,7 @@ const displayed = computed(() => (showAll.value ? items.value : items.value.slic
 
 .shimmer {
     background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.06) 50%, transparent 100%);
-    background-size: 200% 100%;
+    background-size: 202% 100%;
     animation: shimmer-move 1.2s infinite;
 }
 @keyframes shimmer-move {

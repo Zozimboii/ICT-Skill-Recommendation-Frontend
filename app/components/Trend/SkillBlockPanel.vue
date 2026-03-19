@@ -1,80 +1,110 @@
-<!--components/Trend/SkillBlockPanel.vue -->
-
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+const props = defineProps<{
     skills: { id: number; name: string; job_count: number }[];
     selectedSkillId: number | null;
     selectedCategory: string | null;
 }>();
 
 const emit = defineEmits<{
-    (e: 'skill-click', skillId: number, skillName: string): void; // ✅ เพิ่ม skillName
+    (e: 'skill-click', skillId: number, skillName: string): void;
 }>();
+
+const displaySkills = computed(() => props.skills.slice(0, 24));
 </script>
 
 <template>
-    <div class="max-w-full h-full flex flex-col">
-        <div class="mb-4 shrink-0">
-            <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-xl font-bold text-slate-200">
-                    {{ selectedCategory ? `Skills ใน "${selectedCategory}"` : 'Hard Skills' }}
-                </h3>
-                <span
-                    v-if="selectedCategory"
-                    class="text-xs px-2 py-0.5 rounded-full font-semibold"
-                    style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 159, 214, 0.3); color: #5bc4f5"
-                >
-                    เฉพาะสายงานนี้
-                </span>
-                <span v-else class="text-xs px-2 py-0.5 rounded-full font-semibold" style="background: rgba(76, 175, 80, 0.12); border: 1px solid rgba(76, 175, 80, 0.3); color: #81c784">
-                    ทุกสายงาน
-                </span>
-            </div>
-            <p class="text-sm mt-1" style="color: #64748b">
-                <span v-if="selectedCategory">
-                    จำนวนงานใน <span style="color: #5bc4f5">{{ selectedCategory }}</span> ที่ต้องการแต่ละ skill
-                </span>
-                <span v-else> คลิก skill เพื่อดูว่ามีกี่งานที่ต้องการ skill นี้ <span style="color: #81c784">(ทุกสายงาน)</span> </span>
-            </p>
+    <div class="flex flex-col h-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4 shrink-0">
+            <h3 class="text-xl font-bold text-white">
+                {{ selectedCategory ? `Skills ใน "${selectedCategory}"` : 'Hard Skills' }}
+                <span class="text-slate-400 text-sm ml-1">({{ skills.length }})</span>
+            </h3>
+
+            <span v-if="selectedCategory" class="text-sm px-3 py-1 rounded-full font-semibold" style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 159, 214, 0.35); color: #5bc4f5">
+                {{ selectedCategory }}
+            </span>
+
+            <span v-else class="text-sm px-3 py-1 rounded-full font-semibold" style="background: rgba(76, 175, 80, 0.12); border: 1px solid rgba(76, 175, 80, 0.28); color: #81c784"> ทุกสายงาน </span>
         </div>
 
-        <div v-if="!skills.length" class="text-slate-500 text-sm italic">ไม่มีข้อมูล</div>
+        <!-- No Data -->
+        <div v-if="!skills.length" class="flex-1 flex items-center justify-center text-slate-500">ไม่มีข้อมูล</div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 overflow-y-auto" style="max-height: 280px">
+        <!-- Scroll Container -->
+        <div v-else class="skill-scroll grid grid-cols-6 gap-4">
             <div
-                v-for="skill in skills"
+                v-for="skill in displaySkills"
                 :key="skill.id"
-                class="cursor-pointer rounded-lg p-2.5 transition-all duration-200 text-center"
-                :style="
-                    selectedSkillId === skill.id
-                        ? 'border: 1px solid rgba(42,159,214,0.6); background: rgba(13,95,163,0.2);'
-                        : 'border: 1px solid rgba(42,127,212,0.15); background: rgba(8,18,36,0.5);'
-                "
+                class="skill-card p-4 rounded-xl cursor-pointer"
+                :class="{ selected: selectedSkillId === skill.id }"
                 @click="emit('skill-click', skill.id, skill.name)"
-                @mouseover="
-                    (e) => {
-                        if (selectedSkillId !== skill.id) (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,159,214,0.4)';
-                    }
-                "
-                @mouseleave="
-                    (e) => {
-                        if (selectedSkillId !== skill.id) (e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,127,212,0.15)';
-                    }
-                "
             >
-                <div class="font-semibold text-sm truncate" :style="selectedSkillId === skill.id ? 'color: #5bc4f5;' : 'color: #cbd5e1;'" :title="skill.name">
-                    {{ skill.name }}
-                </div>
-                <div class="text-xs mt-0.5 font-medium" :style="selectedSkillId === skill.id ? 'color: #4caf50;' : 'color: #64748b;'">
-                    {{ skill.job_count }}
-                    <span class="opacity-70">{{ selectedCategory ? 'งาน' : 'jobs รวม' }}</span>
+                <div class="flex flex-col h-full justify-between">
+                    <!-- Skill Name -->
+                    <div class="text-sm font-bold text-white leading-snug">
+                        {{ skill.name }}
+                    </div>
+
+                    <!-- Job Count -->
+                    <div class="flex items-center justify-between mt-3">
+                        <span class="text-xs text-slate-400"> Jobs </span>
+
+                        <span class="text-lg font-extrabold text-sky-400">
+                            {{ skill.job_count }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <p v-if="selectedSkillId && selectedCategory" class="mt-3 text-xs shrink-0" style="color: #475569">
-            💡 count ด้านบนคือเฉพาะใน <span style="color: #5bc4f5">{{ selectedCategory }}</span>
-            — กด skill เพื่อดูจำนวนรวมทุกสายงาน
-        </p>
     </div>
 </template>
+
+<style scoped>
+.skill-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+/* scrollbar */
+
+.skill-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.skill-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.skill-scroll::-webkit-scrollbar-thumb {
+    background: #1e3a5f;
+    border-radius: 6px;
+}
+
+.skill-scroll::-webkit-scrollbar-thumb:hover {
+    background: #5bc4f5;
+}
+
+/* card */
+
+.skill-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    transition: all 0.15s ease;
+}
+
+.skill-card:hover {
+    transform: translateY(-3px);
+    border-color: #5bc4f5;
+    box-shadow: 0 6px 18px rgba(91, 196, 245, 0.25);
+}
+
+.skill-card.selected {
+    border-color: #5bc4f5;
+    background: rgba(13, 95, 163, 0.25);
+    box-shadow: 0 0 16px rgba(91, 196, 245, 0.45);
+}
+</style>

@@ -1,27 +1,5 @@
 // types/Trend.ts
-// export interface TrendJobsdbItem {
-//     job_count: number;
-//     sub_category_id: number;
-//     sub_category_name: string;
-//     main_category_name: string;
-// }
 
-// export interface SkillTrendItem {
-//     skill_name: string;
-//     skill_type: 'hard_skill' | 'soft_skill';
-//     sub_category_id: number; // เปลี่ยนเป็น number
-//     count: number;
-// }
-
-// export interface TrendResponse<T> {
-//     series: T[];
-// }
-
-// export interface AggregatedSkill extends SkillTrendItem {
-//     mention_count: number;
-// }
-
-// ── Types ─────────────────────────────────────────────────────────
 export interface JobTrendItem {
     sub_category: string;
     job_count: number;

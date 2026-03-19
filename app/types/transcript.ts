@@ -1,32 +1,12 @@
 // types/transcript.ts
-// export interface Course {
-//     course_code: string;
-//     course_name: string;
-//     grade: string;
-//     credit: number;
-// }
 
-// export interface TranscriptRequest {
-//     user_id: number;
-//     parsed_text: string;
-//     gpa: number;
-//     university: string;
-//     major: string;
-//     file_path: string;
-//     courses: Course[];
-// }
-
-// export interface TranscriptResponse {
-//     message: string;
-//     id: number;
-// }
 export interface Course {
     course_code: string;
     course_name: string;
     grade: string;
     credit: number;
 }
-// types/transcript.ts — ลบ created_at ออก
+
 export interface TranscriptDetail {
     id: number;
     university: string | null;
