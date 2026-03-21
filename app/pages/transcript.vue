@@ -1,10 +1,12 @@
 <!-- pages/transcript.vue -->
 <script setup lang="ts">
 import type { TranscriptDetail, ExtractedSkill } from '~/types/transcript';
+import { useDashboardStore } from '~/stores/useDashboardStore';
 
 useHead({ title: 'Transcript — ICT Skill' });
 
 const { uploadTranscript, getTranscript, getExtractedSkills } = useTranscript();
+const dashboardStore = useDashboardStore();
 
 const file = ref<File | null>(null);
 const uploading = ref(false);
@@ -31,7 +33,18 @@ const loadTranscript = async () => {
     skills.value = transcript.value ? await getExtractedSkills() : [];
     loadingData.value = false;
 };
+const router = useRouter();
 
+const goDashboard = async () => {
+    if (!transcript.value) return;
+
+    await router.push({
+        path: '/dashboard',
+        query: {
+            refresh: Date.now().toString(), // 🔥 force reload data
+        },
+    });
+};
 onMounted(async () => {
     await nextTick();
     loadTranscript();
@@ -39,7 +52,21 @@ onMounted(async () => {
 
 const fileInput = ref<HTMLInputElement | null>(null);
 function handleFileChange(event: Event) {
-    file.value = (event.target as HTMLInputElement).files?.[0] ?? null;
+    const files = (event.target as HTMLInputElement).files;
+    if (!files || files.length === 0) return;
+    if (files.length > 1) {
+        errorMessage.value = 'กรุณาเลือกไฟล์ PDF เพียง 1 ไฟล์เท่านั้น';
+        (event.target as HTMLInputElement).value = '';
+        return;
+    }
+    const f = files[0];
+    if (f && f.type !== 'application/pdf') {
+        errorMessage.value = 'รองรับเฉพาะไฟล์ PDF เท่านั้น';
+        (event.target as HTMLInputElement).value = '';
+        return;
+    }
+    errorMessage.value = null;
+    file.value = f ?? null;
 }
 function handleDrop(event: DragEvent) {
     isDragging.value = false;
@@ -54,8 +81,14 @@ async function handleUpload() {
         const formData = new FormData();
         formData.append('file', file.value);
         await uploadTranscript(formData);
+
         file.value = null;
+
+        // โหลด transcript ใหม่ในหน้านี้
         await loadTranscript();
+
+        // mark dashboard ให้ reload ครั้งถัดไปที่เปิด (ไม่ต้อง await)
+        dashboardStore.reload();
     } catch (e: any) {
         errorMessage.value = e?.message ?? 'อัปโหลดไม่สำเร็จ';
     } finally {
@@ -78,12 +111,12 @@ const detailTab = ref<DetailTab>('skills');
             <Transition name="fade">
                 <div v-if="transcript && !loadingData" class="flex items-center gap-2">
                     <!-- ไปที่ Dashboard -->
-                    <NuxtLink
-                        to="/dashboard"
+                    <button
                         class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-base font-semibold transition-all"
                         style="background: rgba(42, 127, 212, 0.08); border: 1px solid rgba(42, 127, 212, 0.2); color: #5bc4f5"
                         @mouseover="(e) => ((e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,159,214,0.4)')"
                         @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.borderColor = 'rgba(42,127,212,0.2)')"
+                        @click="goDashboard"
                     >
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="7" height="7" />
@@ -92,7 +125,7 @@ const detailTab = ref<DetailTab>('skills');
                             <rect x="3" y="14" width="7" height="7" />
                         </svg>
                         Dashboard
-                    </NuxtLink>
+                    </button>
                     <!-- อัปโหลดใหม่ -->
                     <button
                         class="flex items-center gap-2 px-4 py-2 rounded-xl text-base font-semibold transition-all"
@@ -305,7 +338,7 @@ const detailTab = ref<DetailTab>('skills');
                     </div>
                     <p class="text-lg font-semibold text-slate-200 mb-1.5">วางไฟล์ที่นี่ หรือคลิกเพื่อเลือก</p>
                     <p class="text-base text-slate-500">รองรับเฉพาะไฟล์ PDF</p>
-                    <input ref="fileInput" type="file" accept=".pdf" class="hidden" @change="handleFileChange" />
+                    <input ref="fileInput" type="file" accept=".pdf" class="hidden" :multiple="false" @change="handleFileChange" />
                 </div>
 
                 <!-- Selected file -->

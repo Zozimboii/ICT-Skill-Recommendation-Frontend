@@ -5,12 +5,14 @@ import RadarChart from '~/components/Charts/RadarChart.vue';
 import { storeToRefs } from 'pinia';
 const router = useRouter();
 import { useAuthStore } from '~/stores/useAuthStore';
+import { useDashboardStore } from '~/stores/useDashboardStore';
 
 useHead({ title: 'Skill Assessment — ICT Skill' });
 
 const { getPositions, getPositionSkills, saveAssessment, resetAssessment } = useAssessment();
 const auth = useAuthStore();
 const { isLoggedIn } = storeToRefs(auth);
+const dashboardStore = useDashboardStore();
 
 const positions = ref<PositionItem[]>([]);
 const selectedId = ref('');
@@ -50,14 +52,35 @@ const demandStyle = (weight: number) => {
     return { label: 'ต้องการน้อย', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' };
 };
 
-onMounted(async () => {
+const route = useRoute();
+
+// ── โหลด positions ──────────────────────────────────────────────────────────
+const loadPositions = async () => {
+    if (positions.value.length > 0) return; // โหลดแล้วไม่โหลดซ้ำ
     loadingPositions.value = true;
     try {
         positions.value = await getPositions();
     } finally {
         loadingPositions.value = false;
     }
+};
+
+onMounted(async () => {
+    await loadPositions();
+
+    // reload เมื่อ user กลับมาที่ tab
+    document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden) await loadPositions();
+    });
 });
+
+// reload เมื่อ navigate กลับมาหน้า assessment
+watch(
+    () => route.path,
+    async (p) => {
+        if (p === '/assessment') await loadPositions();
+    },
+);
 
 const handleSelect = async (id: string) => {
     selectedId.value = id;
@@ -71,6 +94,38 @@ const handleSelect = async (id: string) => {
     loadingSkills.value = true;
     try {
         const res = await getPositionSkills(id);
+
+        // ── DEBUG: ดูข้อมูลดิบจาก backend ─────────────────────────────
+        const hard = res.skills.filter((s) => s.skill_type === 'hard_skill');
+        const soft = res.skills.filter((s) => s.skill_type === 'soft_skill');
+
+        console.group(`📊 Position Skills — ${res.position_name} (${res.total_jobs} jobs)`);
+        console.log(`รวมทั้งหมด: ${res.skills.length} skills  |  Hard: ${hard.length}  Soft: ${soft.length}`);
+
+        console.group('🔵 Hard Skills (จาก backend)');
+        console.table(
+            hard.map((s) => ({
+                name: s.skill_name,
+                weight: s.weight,
+                frequency: s.frequency + '%',
+                job_count: s.job_count,
+            })),
+        );
+        console.groupEnd();
+
+        console.group('🟢 Soft Skills (จาก backend)');
+        console.table(
+            soft.map((s) => ({
+                name: s.skill_name,
+                weight: s.weight,
+                frequency: s.frequency + '%',
+                job_count: s.job_count,
+            })),
+        );
+        console.groupEnd();
+        console.groupEnd();
+        // ── END DEBUG ──────────────────────────────────────────────────
+
         positionSkills.value = res.skills;
         positionName.value = res.position_name;
         totalJobs.value = res.total_jobs;
@@ -97,6 +152,8 @@ const handleSave = async () => {
         await saveAssessment(selectedId.value, scores);
         saved.value = true;
         savedOnce.value = true;
+        // reload dashboard store ด้วย $fetch (ไม่ต้องรอ)
+        dashboardStore.reload();
     } catch {
         // error silently — user can retry
     } finally {
@@ -115,16 +172,75 @@ function isValidSkill(name: string): boolean {
     return true;
 }
 
-// filteredPositionSkills: ใช้ทั้งใน skill list ฝั่งซ้าย + radar
-const filteredPositionSkills = computed(() => positionSkills.value.filter((s) => isValidSkill(s.skill_name)));
+// filteredPositionSkills:
+// - กรอง skill ชื่อสั้น/ไม่มีความหมาย
+// - กรองเฉพาะ frequency >= 10 (ต้องการน้อยเกินออก)
+// - เรียง weight desc เพื่อให้ skill สำคัญขึ้นก่อนเสมอ
+const filteredPositionSkills = computed(() => positionSkills.value.filter((s) => isValidSkill(s.skill_name) && s.frequency >= 10).sort((a, b) => b.weight - a.weight));
+
+// ── DEBUG: log เมื่อ computed เปลี่ยน ─────────────────────────────────────
+watchEffect(() => {
+    if (!positionSkills.value.length) return;
+
+    const removed = positionSkills.value.filter((s) => !isValidSkill(s.skill_name) || s.frequency < 10);
+    if (removed.length) {
+        console.group('🚫 Skills ที่ถูก filter ออก (isValidSkill=false หรือ frequency<10%)');
+        console.table(
+            removed.map((s) => ({
+                name: s.skill_name,
+                type: s.skill_type,
+                frequency: s.frequency + '%',
+                weight: s.weight,
+                reason: !isValidSkill(s.skill_name) ? 'ชื่อสั้น/ไม่ valid' : 'frequency ต่ำ',
+            })),
+        );
+        console.groupEnd();
+    }
+
+    console.group('✅ filteredPositionSkills (ที่แสดงฝั่งซ้าย)');
+    console.table(
+        filteredPositionSkills.value.map((s) => ({
+            name: s.skill_name,
+            type: s.skill_type,
+            weight: s.weight,
+            frequency: s.frequency + '%',
+        })),
+    );
+    console.groupEnd();
+
+    console.group('🔵 hardSkillItems (Hard Radar)');
+    console.table(
+        hardSkillItems.value.map((s) => ({
+            name: s.skill_name,
+            weight: s.weight,
+            frequency: s.frequency + '%',
+        })),
+    );
+    console.groupEnd();
+
+    console.group('🟢 softSkillItems (Soft Radar)');
+    console.table(
+        softSkillItems.value.map((s) => ({
+            name: s.skill_name,
+            weight: s.weight,
+            frequency: s.frequency + '%',
+        })),
+    );
+    console.groupEnd();
+});
 
 const RADAR_MAX = 16;
 const radarSkills = computed(() => filteredPositionSkills.value.slice(0, RADAR_MAX));
 const radarLabels = computed(() => radarSkills.value.map((s) => s.skill_name));
 const jobData = computed(() => radarSkills.value.map((s) => s.weight));
 const userData = computed(() => {
-    const map = new Map(userScores.value.map((s) => [s.skill_id, s.score * 20]));
-    return radarSkills.value.map((s) => map.get(s.skill_id) ?? 0);
+    // score 0-5 → แปลงเป็น % ที่เทียบกับ weight ของงาน
+    // เช่น score=4/5 บน skill weight=80 → 64 (แสดงว่าครอบคลุม 80% ของที่งานต้องการ)
+    const map = new Map(userScores.value.map((s) => [s.skill_id, s.score]));
+    return radarSkills.value.map((s) => {
+        const score = map.get(s.skill_id) ?? 0;
+        return Math.round((score / 5) * s.weight);
+    });
 });
 const matchPercent = computed(() => {
     const j = jobData.value,
@@ -143,14 +259,76 @@ const gaps = computed(() =>
         .slice(0, 5),
 );
 const topDemands = computed(() => filteredPositionSkills.value.filter((s) => s.weight >= 70).slice(0, 6));
+
+// ── Priority Score = (frequency*0.7) + (gap_normalized*0.3) ──────────────
+// เรียง skill ที่ควรพัฒนาก่อนโดยรวม market demand + ช่องว่างของ user
+const prioritySkills = computed(() => {
+    const scoreMap = new Map(userScores.value.map((s) => [s.skill_id, s.score]));
+    return (
+        filteredPositionSkills.value
+            .map((s) => {
+                const userScore = scoreMap.get(s.skill_id) ?? 0;
+                const userPct = (userScore / 5) * 100; // 0-100
+                const gap = Math.max(100 - userPct, 0) / 100; // normalized 0-1
+                const freq = s.frequency / 100; // normalized 0-1
+                const priority = freq * 0.7 + gap * 0.3;
+                return {
+                    skill_id: s.skill_id,
+                    skill_name: s.skill_name,
+                    skill_type: s.skill_type,
+                    weight: s.weight,
+                    frequency: s.frequency,
+                    userScore,
+                    priority: Math.round(priority * 100), // 0-100
+                    label: s.frequency >= 70 ? 'Must Have' : s.frequency >= 40 ? 'Good to Have' : 'Optional',
+                    labelColor: s.frequency >= 70 ? '#f87171' : s.frequency >= 40 ? '#fbbf24' : '#94a3b8',
+                };
+            })
+            // เฉพาะที่ user ยังไม่ถึงระดับดี (score < 4) และ priority สูง
+            .filter((s) => s.userScore < 4)
+            .sort((a, b) => b.priority - a.priority)
+            .slice(0, 8)
+    );
+});
+
+// ── Hard / Soft แยก สำหรับ 2 radar charts ────────────────────────────────
+// ใช้ positionSkills โดยตรง (ไม่ผ่าน filteredPositionSkills) เพื่อให้ hard skills ไม่หายไป
+// sort ตาม weight desc + กรอง isValidSkill
+const hardSkillItems = computed(() =>
+    positionSkills.value
+        .filter((s) => s.skill_type === 'hard_skill' && isValidSkill(s.skill_name) && s.frequency >= 5)
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, RADAR_MAX),
+);
+const softSkillItems = computed(() =>
+    positionSkills.value
+        .filter((s) => s.skill_type === 'soft_skill' && isValidSkill(s.skill_name) && s.frequency >= 5)
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, RADAR_MAX),
+);
+
+const hardLabels = computed(() => hardSkillItems.value.map((s) => s.skill_name));
+const hardJobData = computed(() => hardSkillItems.value.map((s) => s.weight));
+const hardUserData = computed(() => {
+    const m = new Map(userScores.value.map((s) => [s.skill_id, s.score]));
+    return hardSkillItems.value.map((s) => Math.round(((m.get(s.skill_id) ?? 0) / 5) * s.weight));
+});
+
+const softLabels = computed(() => softSkillItems.value.map((s) => s.skill_name));
+const softJobData = computed(() => softSkillItems.value.map((s) => s.weight));
+const softUserData = computed(() => {
+    const m = new Map(userScores.value.map((s) => [s.skill_id, s.score]));
+    return softSkillItems.value.map((s) => Math.round(((m.get(s.skill_id) ?? 0) / 5) * s.weight));
+});
 const answeredCount = computed(() => userScores.value.filter((s) => s.score > 0 && filteredPositionSkills.value.some((p) => p.skill_id === s.skill_id)).length);
 const progressPct = computed(() => (filteredPositionSkills.value.length ? Math.round((answeredCount.value / filteredPositionSkills.value.length) * 100) : 0));
 const canSave = computed(() => isLoggedIn.value && answeredCount.value > 0 && !saving.value);
 const hasChanges = computed(() => !saved.value && answeredCount.value > 0);
 
-// ไปที่ dashboard พร้อม force refresh ให้ loadDashboard ทำงานใหม่
+// ไปที่ dashboard — reload ก่อน navigate เพื่อให้ข้อมูลพร้อมทันที
 const goDashboard = async () => {
-    await router.push({ path: '/dashboard', query: { refresh: Date.now().toString() } });
+    await dashboardStore.reload();
+    await router.push('/dashboard');
 };
 </script>
 
@@ -208,6 +386,19 @@ const goDashboard = async () => {
                 </NuxtLink>
             </div>
         </Transition>
+
+        <!-- Info: Assessment ทำเพิ่มได้แม้มี Transcript -->
+        <div class="flex items-start gap-3 px-4 py-3.5 rounded-xl text-base" style="background: rgba(42, 127, 212, 0.06); border: 1px solid rgba(42, 127, 212, 0.18); color: #94a3b8">
+            <svg class="w-5 h-5 shrink-0 mt-0.5" style="color: #5bc4f5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+            </svg>
+            <div>
+                <span class="text-slate-300 font-semibold">ทำ Assessment ควบคู่กับ Transcript ได้</span>
+                — ระบบจะรวมคะแนนเข้าด้วยกัน ผลลัพธ์จะแม่นยำขึ้น
+            </div>
+        </div>
 
         <!-- Step 1 -->
         <div class="rounded-2xl p-5" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
@@ -491,16 +682,67 @@ const goDashboard = async () => {
                         <p class="text-base font-semibold" style="color: #81c784">ไม่มี skill gap ชัดเจน</p>
                     </div>
 
-                    <!-- Radar -->
-                    <div v-if="radarLabels.length" class="rounded-2xl p-4" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
-                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">Skill Radar</p>
+                    <!-- Priority skills to develop -->
+                    <div v-if="prioritySkills.length" class="rounded-2xl p-4" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
+                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">ควรพัฒนาตามลำดับนี้</p>
+                        <div class="space-y-2">
+                            <div
+                                v-for="(s, i) in prioritySkills"
+                                :key="s.skill_id"
+                                class="flex items-center gap-3 px-3 py-2 rounded-xl"
+                                style="background: rgba(13, 95, 163, 0.06); border: 1px solid rgba(42, 127, 212, 0.1)"
+                            >
+                                <span class="w-5 h-5 rounded-full flex items-center justify-center text-base font-bold shrink-0" style="background: rgba(13, 95, 163, 0.25); color: #5bc4f5">{{
+                                    i + 1
+                                }}</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-base font-semibold text-white truncate">{{ s.skill_name }}</span>
+                                        <span
+                                            class="shrink-0 text-base px-1.5 py-0.5 rounded-full font-medium"
+                                            :style="`color:${s.labelColor}; background:${s.labelColor}18; border:1px solid ${s.labelColor}44`"
+                                        >
+                                            {{ s.label }}
+                                        </span>
+                                    </div>
+                                    <div class="w-full h-1 rounded-full mt-1.5" style="background: rgba(42, 127, 212, 0.1)">
+                                        <div class="h-1 rounded-full transition-all" :style="`width:${s.priority}%; background:linear-gradient(90deg,#0d5fa3,${s.labelColor})`" />
+                                    </div>
+                                </div>
+                                <span class="shrink-0 text-base font-bold" :style="`color:${s.labelColor}`"> {{ s.userScore }}/5 </span>
+                            </div>
+                        </div>
+                        <p class="text-base text-slate-600 mt-3">คำนวณจาก Market Demand (70%) + ช่องว่างที่ขาด (30%)</p>
+                    </div>
+
+                    <!-- Hard Skills Radar -->
+                    <div v-if="hardLabels.length" class="rounded-2xl p-4" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
+                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">Hard Skills Radar</p>
                         <ClientOnly>
                             <RadarChart
-                                :labels="radarLabels"
+                                :labels="hardLabels"
                                 :datasets="[
-                                    { label: 'คุณ', data: userData, borderColor: '#2a9fd6', backgroundColor: 'rgba(42,159,214,0.2)', pointBackgroundColor: '#2a9fd6' },
-                                    { label: 'ตำแหน่งงาน', data: jobData, borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.15)', pointBackgroundColor: '#4caf50' },
+                                    { label: 'คุณ', data: hardUserData, borderColor: '#2a9fd6', backgroundColor: 'rgba(42,159,214,0.2)', pointBackgroundColor: '#2a9fd6' },
+                                    { label: 'ตำแหน่งงาน', data: hardJobData, borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.15)', pointBackgroundColor: '#4caf50' },
                                 ]"
+                                :compact="true"
+                                :label-font-size="11"
+                            />
+                        </ClientOnly>
+                    </div>
+
+                    <!-- Soft Skills Radar -->
+                    <div v-if="softLabels.length" class="rounded-2xl p-4" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
+                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">Soft Skills Radar</p>
+                        <ClientOnly>
+                            <RadarChart
+                                :labels="softLabels"
+                                :datasets="[
+                                    { label: 'คุณ', data: softUserData, borderColor: '#2a9fd6', backgroundColor: 'rgba(42,159,214,0.2)', pointBackgroundColor: '#2a9fd6' },
+                                    { label: 'ตำแหน่งงาน', data: softJobData, borderColor: '#81c784', backgroundColor: 'rgba(129,199,132,0.15)', pointBackgroundColor: '#81c784' },
+                                ]"
+                                :compact="true"
+                                :label-font-size="11"
                             />
                         </ClientOnly>
                     </div>

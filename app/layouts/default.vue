@@ -1,4 +1,4 @@
-<!-- app/layouts/default.vue -->
+<!-- app/layouts/default.vue
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '~/stores/useAuthStore';
@@ -16,6 +16,76 @@ onMounted(() =>
         scrolled.value = window.scrollY > 20;
     }),
 );
+onUnmounted(() => window.removeEventListener('scroll', () => {}));
+watch(
+    () => route.path,
+    () => {
+        mobileOpen.value = false;
+    },
+);
+
+const navItems = computed(() => [
+    { to: '/', label: 'Trend', requireAuth: null },
+    { to: '/searchjob', label: 'Search Job', requireAuth: null },
+    { to: '/transcript', label: 'Transcript', requireAuth: true },
+    { to: '/assessment', label: 'Assessment', requireAuth: false },
+    ...(isLoggedIn.value ? [{ to: '/dashboard', label: 'Dashboard', requireAuth: true }] : []),
+    ...(role.value === 'admin' ? [{ to: '/admin', label: 'Admin', requireAuth: true }] : []),
+]);
+
+const toast = ref('');
+let toastTimer: ReturnType<typeof setTimeout>;
+function showToast(msg: string) {
+    toast.value = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.value = '';
+    }, 3000);
+}
+
+const router = useRouter();
+function handleNavClick(item: (typeof navItems.value)[0], e: MouseEvent) {
+    if (item.requireAuth === true && !isLoggedIn.value) {
+        e.preventDefault();
+        showToast('กรุณา Login ก่อนใช้งาน ' + item.label);
+        router.push('/login');
+    }
+}
+
+const isActive = (path: string) => route.path === path;
+</script> -->
+<!-- app/layouts/default.vue -->
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '~/stores/useAuthStore';
+
+const route = useRoute();
+const auth = useAuthStore();
+const { isLoggedIn, role } = storeToRefs(auth);
+const { logout } = auth;
+
+const scrolled = ref(false);
+const mobileOpen = ref(false);
+
+onMounted(() => {
+    window.addEventListener('scroll', () => {
+        scrolled.value = window.scrollY > 20;
+    });
+
+    // sync token ทันทีเมื่อ app mount
+    auth.syncFromCookie();
+
+    // sync ทุกครั้งที่ user กลับมาที่ tab — จับกรณี token หมดขณะ tab ซ่อน
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) auth.syncFromCookie();
+    });
+
+    // รับ event จาก apiFetch เมื่อ token หมดอายุ → แสดง toast ก่อน logout
+    window.addEventListener('auth:expired', (e: Event) => {
+        const msg = (e as CustomEvent).detail?.message ?? 'Session หมดอายุ กรุณา Login ใหม่';
+        showToast(msg);
+    });
+});
 onUnmounted(() => window.removeEventListener('scroll', () => {}));
 watch(
     () => route.path,

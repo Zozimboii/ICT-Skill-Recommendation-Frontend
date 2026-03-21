@@ -1,65 +1,106 @@
-// import type { TranscriptResponse } from '~/types/transcript';
+// // composables/useTranscript.ts
+// import type { TranscriptDetail, ExtractedSkill, JobRecommendation } from '~/types/transcript';
+// import { useAuthStore } from '~/stores/useAuthStore';
 
-// const BASE_URL = '/api/v1/transcript';
+// const BASE = '/api/v1/transcript';
 
 // export function useTranscript() {
-//     async function uploadTranscript(formData: FormData): Promise<TranscriptResponse> {
-//         // 1. เรียกใช้ useApiFetch
-//         const { data, error } = await useApiFetch<TranscriptResponse>(`${BASE_URL}/upload-transcript`, {
-//             method: 'POST',
-//             body: formData,
-//             // สำหรับ FormData ไม่ต้องตั้ง Content-Type เอง
-//             // Browser จะจัดการให้พร้อม boundary อัตโนมัติครับ
-//         });
+//     const auth = useAuthStore();
 
-//         // 2. เช็ค Error
-//         if (error.value) {
-//             throw error.value;
-//         }
-
-//         // 3. เข้าถึงค่าผ่าน .value และเช็คว่าเป็น undefined หรือไม่
-//         const res = data.value;
-
-//         if (!res) {
-//             throw new Error('Upload failed: No response data');
-//         }
-
-//         // ตอนนี้ res จะมี Type เป็น TranscriptResponse (ไม่ใช่ Ref แล้ว)
-//         return res;
+//     function getHeaders(): Record<string, string> {
+//         return auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
 //     }
 
-//     return { uploadTranscript };
+//     function baseUrl(): string {
+//         return useRuntimeConfig().public.apiBase as string;
+//     }
+
+//     async function uploadTranscript(formData: FormData) {
+//         return await $fetch(`${baseUrl()}${BASE}/upload-transcript`, {
+//             method: 'POST',
+//             headers: getHeaders(),
+//             body: formData,
+//         });
+//     }
+
+//     async function getTranscript(): Promise<TranscriptDetail | null> {
+//         try {
+//             return await $fetch<TranscriptDetail>(`${baseUrl()}${BASE}/profile`, {
+//                 headers: getHeaders(),
+//             });
+//         } catch (e: any) {
+//             if (e?.status === 404) return null;
+//             console.error('[useTranscript] getTranscript:', e?.status ?? e);
+//             return null;
+//         }
+//     }
+
+//     async function getExtractedSkills(): Promise<ExtractedSkill[]> {
+//         try {
+//             return await $fetch<ExtractedSkill[]>(`${baseUrl()}${BASE}/profile/skills`, {
+//                 headers: getHeaders(),
+//             });
+//         } catch (e: any) {
+//             console.error('[useTranscript] getExtractedSkills:', e?.status ?? e);
+//             return [];
+//         }
+//     }
+
+//     async function getRecommendations(): Promise<JobRecommendation[]> {
+//         try {
+//             return await $fetch<JobRecommendation[]>(`${baseUrl()}${BASE}/profile/recommendations`, {
+//                 headers: getHeaders(),
+//             });
+//         } catch (e: any) {
+//             console.error('[useTranscript] getRecommendations:', e?.status ?? e);
+//             return [];
+//         }
+//     }
+
+//     return { uploadTranscript, getTranscript, getExtractedSkills, getRecommendations };
 // }
-
 // composables/useTranscript.ts
+import type { TranscriptDetail, ExtractedSkill, JobRecommendation } from '~/types/transcript';
+import { apiFetch } from '~/composables/useApiFetch';
 
-import type { TranscriptResponse, TranscriptDetail, ExtractedSkill, JobRecommendation } from '~/types/transcript';
-
-const BASE_URL = '/api/v1/transcript';
+const BASE = '/api/v1/transcript';
 
 export function useTranscript() {
-    async function uploadTranscript(formData: FormData): Promise<TranscriptResponse> {
-        const { data, error } = await useApiFetch<TranscriptResponse>(`${BASE_URL}/upload-transcript`, { method: 'POST', body: formData });
-        if (error.value) throw error.value;
-        if (!data.value) throw new Error('Upload failed: No response data');
-        return data.value;
+    async function uploadTranscript(formData: FormData) {
+        // FormData ไม่ใส่ Content-Type — browser set boundary อัตโนมัติ
+        return await apiFetch(`${BASE}/upload-transcript`, {
+            method: 'POST',
+            body: formData as any,
+        });
     }
 
     async function getTranscript(): Promise<TranscriptDetail | null> {
-        const { data, error } = await useApiFetch<TranscriptDetail>(`${BASE_URL}/profile`);
-        if (error.value) return null;
-        return data.value ?? null;
+        try {
+            return await apiFetch<TranscriptDetail>(`${BASE}/profile`);
+        } catch (e: any) {
+            if (e?.status === 404) return null;
+            if (e?.status !== 401) console.error('[useTranscript] getTranscript:', e?.status ?? e);
+            return null;
+        }
     }
 
     async function getExtractedSkills(): Promise<ExtractedSkill[]> {
-        const { data, error } = await useApiFetch<ExtractedSkill[]>(`${BASE_URL}/profile/skills`);
-        if (error.value) return [];
-        return data.value ?? [];
+        try {
+            return await apiFetch<ExtractedSkill[]>(`${BASE}/profile/skills`);
+        } catch (e: any) {
+            if (e?.status !== 401) console.error('[useTranscript] getExtractedSkills:', e?.status ?? e);
+            return [];
+        }
     }
+
     async function getRecommendations(): Promise<JobRecommendation[]> {
-        const { data, error } = await useApiFetch<JobRecommendation[]>(`${BASE_URL}/profile/recommendations`);
-        if (error.value) return [];
-        return data.value ?? [];
+        try {
+            return await apiFetch<JobRecommendation[]>(`${BASE}/profile/recommendations`);
+        } catch (e: any) {
+            if (e?.status !== 401) console.error('[useTranscript] getRecommendations:', e?.status ?? e);
+            return [];
+        }
     }
+
     return { uploadTranscript, getTranscript, getExtractedSkills, getRecommendations };
 }

@@ -1,4 +1,6 @@
-import type { Job, JobListResponse, SearchMode } from '~/types/SearchJobs';
+// composables/useJobSearch.ts
+
+import type { Job, JobListResponse, JobSearchParams, JobDateRange, SearchMode } from '~/types/SearchJobs';
 
 const BASE_URL = '/api/v1/jobs';
 
@@ -14,108 +16,97 @@ export const useJobSearch = () => {
     const selectedSubCategory = ref('all');
     const subCategories = ref<string[]>([]);
 
-    // 🔥 NEW: บอกว่า search จากอะไร
+    // dateRangeDb — แสดง range ใน UI (ไม่กรอง)
+    const dateRangeDb = ref<JobDateRange>({ min_date: null, max_date: null });
+
+    // searchMeta — บอก user ว่าค้นจากอะไร
     const searchMeta = ref<string[]>([]);
 
     const LIMIT = 20;
     const totalPages = computed(() => Math.ceil(total.value / LIMIT));
 
+    // ─── Fetch categories ────────────────────────────────────────────────────
     const fetchCategories = async () => {
-        const { data, error: fetchError } = await useApiFetch<string[]>(`${BASE_URL}/categories`);
-        if (!fetchError.value) subCategories.value = data.value ?? [];
+        const { data, error: e } = await useApiFetch<string[]>(`${BASE_URL}/categories`);
+        if (!e.value) subCategories.value = data.value ?? [];
     };
 
-    function buildQuery() {
-        const query: any = {
-            page: page.value,
-            limit: LIMIT,
-        };
-
-        if (keyword.value?.trim()) {
-            query.keyword = keyword.value.trim();
+    // ─── ข้อ 4: Fetch date range จาก DB ────────────────────────────────────
+    const fetchDateRange = async () => {
+        const { data, error: e } = await useApiFetch<JobDateRange>(`${BASE_URL}/date-range`);
+        if (!e.value && data.value) {
+            dateRangeDb.value = data.value;
         }
+    };
 
-        if (selectedSubCategory.value !== 'all') {
-            query.sub_category = selectedSubCategory.value;
+    // ─── Build query ─────────────────────────────────────────────────────────
+    const buildQuery = (): JobSearchParams => {
+        const q: JobSearchParams = { page: page.value, limit: LIMIT };
+
+        if (searchMode.value === 'keyword' && keyword.value.trim()) {
+            q.keyword = keyword.value.trim();
         }
+        if (searchMode.value === 'dropdown' && selectedSubCategory.value !== 'all') {
+            q.sub_category = selectedSubCategory.value;
+        }
+        return q;
+    };
 
-        return query;
-    }
-
+    // ─── detectSearchMeta ────────────────────────────────────────────────────
     const detectSearchMeta = () => {
         const kw = keyword.value.toLowerCase();
-        const meta: string[] = [];
-
-        // 🔥 heuristic ง่าย ๆ (ไม่ต้องรอ backend)
         if (!kw) return [];
-
-        if (kw.includes('react') || kw.includes('python') || kw.includes('sql')) {
-            meta.push('Skill');
-        }
-
-        if (kw.includes('developer') || kw.includes('engineer') || kw.includes('analyst')) {
-            meta.push('ชื่องาน');
-        }
-
-        // default
-        if (!meta.length) {
-            meta.push('ชื่องาน', 'บริษัท', 'Skill');
-        }
-
+        const meta: string[] = [];
+        if (/react|python|java|sql|aws|docker|kubernetes/.test(kw)) meta.push('Skill');
+        if (/developer|engineer|analyst|manager/.test(kw)) meta.push('ชื่องาน');
+        if (!meta.length) meta.push('ชื่องาน', 'บริษัท');
         return meta;
     };
 
+    // ─── Search ──────────────────────────────────────────────────────────────
     const searchJobs = async (resetPage = true) => {
         if (resetPage) page.value = 1;
-
         loading.value = true;
         error.value = null;
 
-        const { data, error: fetchError } = await useApiFetch<JobListResponse>(`${BASE_URL}/search`, {
-            query: buildQuery(),
-        });
+        const { data, error: fetchError } = await useApiFetch<JobListResponse>(`${BASE_URL}/search`, { query: buildQuery() });
 
         if (fetchError.value) {
-            error.value = fetchError.value.message;
+            error.value = fetchError.value?.message ?? 'เกิดข้อผิดพลาด';
             jobs.value = [];
             total.value = 0;
-        } else {
-            jobs.value = data.value?.data ?? [];
-            total.value = data.value?.total ?? 0;
-
-            // 🔥 SET META
-            searchMeta.value = detectSearchMeta();
+            loading.value = false;
+            return;
         }
 
+        jobs.value = data.value?.data ?? [];
+        total.value = data.value?.total ?? 0;
+        searchMeta.value = detectSearchMeta();
         loading.value = false;
     };
 
+    // ─── Pagination ──────────────────────────────────────────────────────────
     const prevPage = async () => {
         if (page.value <= 1) return;
         page.value--;
         await searchJobs(false);
     };
-
     const nextPage = async () => {
         if (page.value >= totalPages.value) return;
         page.value++;
         await searchJobs(false);
     };
 
+    // ─── Reset ───────────────────────────────────────────────────────────────
     const reset = () => {
         keyword.value = '';
         selectedSubCategory.value = 'all';
         page.value = 1;
+        jobs.value = [];
+        total.value = 0;
+        error.value = null;
         searchMeta.value = [];
     };
-
-    // let timeout: any;
-    // watch([keyword, selectedSubCategory], () => {
-    //     clearTimeout(timeout);
-    //     timeout = setTimeout(() => {
-    //         searchJobs();
-    //     }, 400);
-    // });
 
     return {
         jobs,
@@ -128,8 +119,10 @@ export const useJobSearch = () => {
         selectedSubCategory,
         subCategories,
         totalPages,
-        searchMeta, // 🔥 NEW
+        searchMeta,
+        dateRangeDb,
         fetchCategories,
+        fetchDateRange,
         searchJobs,
         prevPage,
         nextPage,

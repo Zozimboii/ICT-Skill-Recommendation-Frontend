@@ -36,7 +36,7 @@ const onSubmit = async () => {
 
 <template>
     <div class="min-h-[80vh] flex items-center justify-center px-4">
-        <div class="w-full max-w-md">
+        <div class="w-full max-w-2xl">
             <div class="rounded-2xl p-8 shadow-2xl" style="background: rgba(8, 18, 36, 0.85); border: 1px solid rgba(42, 127, 212, 0.2); backdrop-filter: blur(20px)">
                 <div class="h-0.5 w-16 rounded-full mb-6" style="background: linear-gradient(90deg, #0d5fa3, #4caf50)" />
                 <div class="mb-6">

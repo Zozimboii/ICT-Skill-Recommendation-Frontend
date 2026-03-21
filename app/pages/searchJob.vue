@@ -1,59 +1,26 @@
 <!-- pages/searchJob.vue -->
 <script setup lang="ts">
-// useHead({ title: 'Search Job — ICT Skill' });
-// const route = useRoute();
-// const { jobs, total, page, loading, error, searchMode, keyword, selectedSubCategory, subCategories, totalPages, fetchCategories, searchJobs, prevPage, nextPage, searchMeta } = useJobSearch();
-
-// const hasLoaded = ref(false);
-// const fromSkillName = ref('');
-
-// async function doSearch() {
-//     fromSkillName.value = '';
-//     // trim + lowercase ให้ backend search ได้ทั้งตัวเล็กตัวใหญ่
-//     keyword.value = keyword.value.trim().toLowerCase();
-//     await searchJobs();
-// }
-
-// // suggestion chips: คำที่ search บ่อย
-// const suggestions = ['python', 'javascript', 'react', 'java', 'sql', 'network', 'devops', 'docker', 'aws', 'security', 'data analyst', 'frontend', 'backend', 'mobile'];
-// // อ่าน query params และ set keyword/mode
-// function applyRouteQuery() {
-//     const skillId = route.query.skill_id;
-//     const skillName = route.query.skill_name ?? route.query.skill;
-//     const kw = route.query.keyword; // จาก handleSearchAllJobs ใน index.vue
-
-//     if (kw) {
-//         // กรณีมาจาก modal "ค้นหาทั้งหมด"
-//         keyword.value = String(kw).toLowerCase();
-//         searchMode.value = 'keyword';
-//         fromSkillName.value = String(kw);
-//     } else if (skillId || skillName) {
-//         fromSkillName.value = skillName ? String(skillName) : '';
-//         searchMode.value = 'keyword';
-//         keyword.value = fromSkillName.value || String(skillId ?? '');
-//     }
-// }
-// onMounted(async () => {
-//     await nextTick();
-//     await fetchCategories();
-//     applyRouteQuery();
-//     await searchJobs();
-//     hasLoaded.value = true;
-// });
-// // watch route query เมื่อ navigate มาจาก modal โดยไม่ reload หน้า
-// watch(
-//     () => route.query,
-//     async (q) => {
-//         if (q.keyword || q.skill_name || q.skill_id) {
-//             applyRouteQuery();
-//             await searchJobs();
-//         }
-//     },
-// );
-
 useHead({ title: 'Search Job — ICT Skill' });
 const route = useRoute();
-const { jobs, total, page, loading, error, searchMode, keyword, selectedSubCategory, subCategories, totalPages, fetchCategories, searchJobs, prevPage, nextPage, searchMeta } = useJobSearch();
+const {
+    jobs,
+    total,
+    page,
+    loading,
+    error,
+    searchMode,
+    keyword,
+    selectedSubCategory,
+    subCategories,
+    totalPages,
+    fetchCategories,
+    fetchDateRange,
+    searchJobs,
+    prevPage,
+    nextPage,
+    searchMeta,
+    dateRangeDb,
+} = useJobSearch();
 
 const hasLoaded = ref(false);
 const fromSkillName = ref('');
@@ -92,10 +59,18 @@ function applyRouteQuery() {
         keyword.value = fromSkillName.value || String(skillId ?? '');
     }
 }
+const handlePrevPage = async () => {
+    await prevPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
+const handleNextPage = async () => {
+    await nextPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 onMounted(async () => {
     await nextTick();
-    await fetchCategories();
+    await Promise.all([fetchCategories(), fetchDateRange()]);
     applyRouteQuery();
     await searchJobs();
     hasLoaded.value = true;
@@ -121,80 +96,19 @@ watch(
             <p class="text-lg text-slate-400 mt-1">ค้นหาตำแหน่งงาน ICT และดู skills ที่ต้องการ</p>
         </div>
 
-        <!-- Skill banner (มาจาก Trend) -->
-        <Transition name="fade">
-            <div
-                v-if="fromSkillName"
-                class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl flex-wrap"
-                style="background: rgba(42, 127, 212, 0.08); border: 1px solid rgba(42, 127, 212, 0.25)"
-            >
-                <div class="flex items-center gap-2.5">
-                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="#5bc4f5" stroke-width="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" y2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                    <div>
-                        <p class="text-lg font-semibold text-white">
-                            งานที่ต้องการ <span style="color: #5bc4f5">{{ fromSkillName }}</span>
-                        </p>
-                        <p class="text-base text-slate-300 mt-0.5">กำลังแสดงงานที่เกี่ยวข้อง · ค้นหาเพิ่มเติมได้ด้านล่าง</p>
-                    </div>
-                </div>
-                <button
-                    class="text-base text-slate-300 hover:text-white transition px-2 py-1 rounded-lg"
-                    style="border: 1px solid rgba(255, 255, 255, 0.08)"
-                    @click="
-                        fromSkillName = '';
-                        keyword = '';
-                        searchJobs();
-                    "
-                >
-                    ล้าง
-                </button>
-            </div>
-        </Transition>
-
         <!-- Search Panel -->
         <div class="rounded-2xl p-6 space-y-5" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
             <div>
                 <h2 class="font-bold text-2xl text-white mb-0.5">ค้นหาข้อมูลตำแหน่งงาน</h2>
                 <p class="text-base text-slate-400 mb-1">เลือกวิธีค้นหาที่ต้องการด้านล่าง</p>
-                <p class="text-base text-slate-300">ข้อมูลอ้างอิงช่วงวันที่ {{ new Date().toLocaleDateString('th-TH') }}</p>
-            </div>
-
-            <!-- Search key info -->
-            <div class="flex items-start gap-2 px-4 py-3 rounded-xl text-base leading-relaxed" style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.15); color: #64748b">
-                <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="#5bc4f5" stroke-width="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
-                <div>
-                    <b class="text-slate-300">พิมพ์คำค้นหา</b> — ค้นจาก <b class="text-slate-400">ชื่องาน</b> และ <b class="text-slate-400">ชื่อบริษัท</b>
-                    &nbsp;|&nbsp;
-                    <b class="text-slate-300">เลือกจากรายการ</b> — กรองตาม <b class="text-slate-400">สายงาน</b> เช่น Developers, Data Analyst, Networks
-                </div>
-            </div>
-
-            <!-- Popular tags -->
-            <div>
-                <p class="text-base text-slate-300 mb-2">ค้นหายอดนิยม</p>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="tag in ['Frontend', 'Backend', 'Data', 'DevOps', 'AI']"
-                        :key="tag"
-                        class="px-3 py-1.5 rounded-full text-base font-medium transition"
-                        style="background: rgba(13, 95, 163, 0.15); color: #5bc4f5; border: 1px solid rgba(42, 127, 212, 0.2)"
-                        @click="
-                            keyword = tag;
-                            searchMode = 'keyword';
-                            doSearch();
-                        "
-                    >
-                        {{ tag }}
-                    </button>
-                </div>
+                <p class="text-base text-slate-300">
+                    ข้อมูลอ้างอิงช่วงวันที่
+                    <template v-if="dateRangeDb.min_date && dateRangeDb.max_date">
+                        {{ new Date(dateRangeDb.min_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) }}
+                        - {{ new Date(dateRangeDb.max_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) }}
+                    </template>
+                    <template v-else>{{ new Date().toLocaleDateString('th-TH') }}</template>
+                </p>
             </div>
 
             <!-- Mode Toggle -->
@@ -234,17 +148,6 @@ watch(
                     >
                         ค้นหา
                     </button>
-                </div>
-                <!-- แสดงว่า search คำนี้อยู่ + ผลลัพธ์ -->
-                <div v-if="keyword && total > 0" class="flex items-center gap-2 flex-wrap">
-                    <span class="text-base text-slate-400">ค้นหา:</span>
-                    <span class="px-3 py-1 rounded-full text-base font-semibold" style="background: rgba(42, 127, 212, 0.15); border: 1px solid rgba(42, 159, 214, 0.3); color: #5bc4f5">
-                        {{ keyword }}
-                    </span>
-                    <span class="text-base text-slate-400">พบ {{ total.toLocaleString() }} งาน</span>
-                    <span v-if="searchMeta?.length" class="text-base" style="color: #64748b">
-                        · ค้นจาก <span style="color: #5bc4f5">{{ searchMeta.join(', ') }}</span>
-                    </span>
                 </div>
             </div>
 
@@ -352,46 +255,27 @@ watch(
                     </div>
 
                     <!-- Meta -->
-                    <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-slate-300 mb-3">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <rect x="2" y="7" width="20" height="14" rx="2" />
-                                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                            </svg>
-                            {{ job.company_name }}
-                        </span>
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                <circle cx="12" cy="10" r="3" />
-                            </svg>
-                            {{ job.location ?? 'Bangkok' }}
-                        </span>
-                        <span v-if="job.experience_level" class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                            </svg>
-                            {{ job.experience_level }}
-                        </span>
-                        <span v-if="job.posted_date" class="flex items-center gap-1.5" style="color: #94a3b8">
-                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                            {{
-                                (() => {
-                                    const d = new Date(job.posted_date);
-                                    const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
-                                    if (diff === 0) return 'วันนี้';
-                                    if (diff === 1) return 'เมื่อวาน';
-                                    if (diff <= 7) return diff + ' วันที่แล้ว';
-                                    if (diff <= 30) return Math.floor(diff / 7) + ' สัปดาห์ที่แล้ว';
-                                    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
-                                })()
-                            }}
-                        </span>
+                    <div class="flex items-center justify-between gap-2 flex-wrap text-base text-slate-300 mb-3">
+                        <div class="flex flex-wrap gap-x-4 gap-y-0.5">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" />
+                                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                                </svg>
+                                {{ job.company_name }}
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                {{ job.location ?? 'Bangkok' }}
+                            </span>
+                            <!-- วันที่จริง ขวาสุด -->
+                            <span v-if="job.posted_date" class="shrink-0 text-base" style="color: #64748b">
+                                {{ new Date(job.posted_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Description -->
@@ -402,7 +286,7 @@ watch(
                     <!-- Skills -->
                     <div v-if="job.skills?.length" class="flex flex-wrap gap-2 mb-3">
                         <span
-                            v-for="skill in job.skills.slice(0, 6)"
+                            v-for="skill in job.skills"
                             :key="skill.id"
                             class="px-3 py-1 text-base font-medium rounded-full"
                             :style="
@@ -441,16 +325,18 @@ watch(
                 :disabled="page === 1 || loading"
                 class="px-4 py-2 rounded-xl text-base font-medium text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 127, 212, 0.25)"
-                @click="prevPage"
+                @click="handlePrevPage"
             >
                 ← ก่อนหน้า
             </button>
+
             <p class="text-base text-slate-500">แสดง {{ (page - 1) * 20 + 1 }}–{{ Math.min(page * 20, total) }} จาก {{ total }} งาน</p>
+
             <button
                 :disabled="page === totalPages || loading"
                 class="px-4 py-2 rounded-xl text-base font-medium text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 127, 212, 0.25)"
-                @click="nextPage"
+                @click="handleNextPage"
             >
                 ถัดไป →
             </button>

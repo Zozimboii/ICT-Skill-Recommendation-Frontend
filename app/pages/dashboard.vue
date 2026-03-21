@@ -1,18 +1,18 @@
 <!-- pages/dashboard.vue -->
 <script setup lang="ts">
-import type { DashboardSummary, SkillGapResponse, RecommendationItem } from '~/types/Dashboard';
+import { storeToRefs } from 'pinia';
 import RadarChart from '~/components/Charts/RadarChart.vue';
 import { buildRadarData, buildRadarDataSplit } from '~/composables/useJobRadar';
+import { useDashboardStore } from '~/stores/useDashboardStore';
 
 useHead({ title: 'Dashboard — ICT Skill' });
 const route = useRoute();
-const { getSummary, getSkillGap, getRecommendations } = useDashboard();
+const router = useRouter();
 const { resetAssessment } = useAssessment();
 
-const summary = ref<DashboardSummary | null>(null);
-const skillGap = ref<SkillGapResponse[]>([]);
-const recommendations = ref<RecommendationItem[]>([]);
-const loading = ref(true);
+// ── ใช้ store เป็น single source of truth ──────────────────────────────────
+const dashboardStore = useDashboardStore();
+const { summary, skillGap, recommendations, loading } = storeToRefs(dashboardStore);
 const resettingAssessment = ref(false);
 
 type Tab = 'overview' | 'skills' | 'matches' | 'gap';
@@ -46,44 +46,7 @@ const stepBg: Record<string, string> = {
     optional: 'background:rgba(148,163,184,0.04)',
 };
 
-const loadDashboard = async () => {
-    loading.value = true;
-    summary.value = await getSummary();
-    if (summary.value?.has_transcript) {
-        [skillGap.value, recommendations.value] = await Promise.all([getSkillGap(), getRecommendations()]);
-    }
-    loading.value = false;
-};
-
-const handleResetAssessment = async () => {
-    if (!confirm('ต้องการล้างผล Assessment ทั้งหมดและทำใหม่?')) return;
-    resettingAssessment.value = true;
-    try {
-        await resetAssessment();
-        await navigateTo('/assessment');
-    } finally {
-        resettingAssessment.value = false;
-    }
-};
-
-onMounted(async () => {
-    await nextTick();
-    await loadDashboard();
-});
-// reload เมื่อ navigate มาหน้านี้ หรือมา query refresh เปลี่ยน (จาก assessment)
-watch(
-    () => route.path,
-    async (p) => {
-        if (p === '/dashboard') await loadDashboard();
-    },
-);
-watch(
-    () => route.query.refresh,
-    async (val) => {
-        if (val) await loadDashboard();
-    },
-);
-
+// ── Computed จาก store ─────────────────────────────────────────────────────
 const hardSkillsFromGap = computed(() => {
     const seen = new Set<string>();
     const result: { name: string }[] = [];
@@ -119,11 +82,46 @@ const avgMatch = computed(() => {
     return Math.round(recommendations.value.reduce((a, r) => a + r.skill_match_percent, 0) / recommendations.value.length);
 });
 
-// ── Radar: expanded state per job ─────────────────────────────────
+// ── Radar expanded state ───────────────────────────────────────────────────
 const expandedRadar = ref<Record<number, boolean>>({});
+const showResetModal = ref(false);
 function toggleRadar(id: number) {
     expandedRadar.value[id] = !expandedRadar.value[id];
 }
+
+// ── Reset assessment ───────────────────────────────────────────────────────
+const handleReset = async () => {
+    showResetModal.value = false;
+    resettingAssessment.value = true;
+    try {
+        await resetAssessment();
+        dashboardStore.clearData();
+        await router.push('/assessment');
+    } catch (e) {
+        console.error('Reset failed:', e);
+    } finally {
+        resettingAssessment.value = false;
+    }
+};
+
+// ── Load on mount + route change ───────────────────────────────────────────
+onMounted(() => {
+    dashboardStore.load();
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && route.path === '/dashboard') {
+            dashboardStore.load();
+        }
+    });
+});
+
+// reload ทุกครั้งที่ navigate มาหน้านี้
+watch(
+    () => route.path,
+    (p) => {
+        if (p === '/dashboard') dashboardStore.load();
+    },
+);
 </script>
 
 <template>
@@ -167,7 +165,7 @@ function toggleRadar(id: number) {
                                 อัปเดต Transcript
                             </NuxtLink>
                         </div>
-                        <p class="text-base text-slate-400">ข้อมูลอ้างอิงจากผลการเรียน — แม่นยำสูงสุด</p>
+                        <p class="text-base text-slate-400">ข้อมูลอ้างอิงจากผลการเรียน - แม่นยำสูงสุด</p>
                     </template>
 
                     <!-- Case B: มีแค่ Assessment -->
@@ -186,7 +184,7 @@ function toggleRadar(id: number) {
                                 :disabled="resettingAssessment"
                                 @mouseover="(e) => ((e.currentTarget as HTMLElement).style.color = '#f87171')"
                                 @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.color = '#64748b')"
-                                @click="handleResetAssessment"
+                                @click="showResetModal = true"
                             >
                                 {{ resettingAssessment ? 'กำลังรีเซ็ต...' : 'ทำใหม่' }}
                             </button>
@@ -874,8 +872,46 @@ function toggleRadar(id: number) {
         </template>
     </div>
 
-    <!-- Debug panel — ลบออกก่อน deploy -->
-    <RadarDebugPanel v-if="!loading && recommendations.length" :recommendations="recommendations" :skill-gap="skillGap" />
+    <!-- Reset Assessment Modal -->
+    <Transition name="fade">
+        <div
+            v-if="showResetModal"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px)"
+            @click.self="showResetModal = false"
+        >
+            <div class="w-full max-w-sm rounded-2xl p-6 space-y-4" style="background: #0c1524; border: 1px solid rgba(239, 68, 68, 0.3)">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3)">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+                            <path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-lg font-bold text-white">ล้างผล Assessment</p>
+                        <p class="text-base text-slate-400 mt-0.5">คะแนนทั้งหมดจะถูกลบ ไม่สามารถกู้คืนได้</p>
+                    </div>
+                </div>
+                <div class="rounded-xl px-4 py-3 text-base" style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171">
+                    หากมี Transcript อยู่ ระบบจะยังคง Skill Profile จาก Transcript ไว้
+                </div>
+                <div class="flex gap-3 pt-1">
+                    <button class="flex-1 py-2.5 rounded-xl text-base font-semibold transition-all" style="border: 1px solid rgba(255, 255, 255, 0.1); color: #64748b" @click="showResetModal = false">
+                        ยกเลิก
+                    </button>
+                    <button
+                        class="flex-1 py-2.5 rounded-xl text-base font-bold text-white transition-all"
+                        style="background: rgba(239, 68, 68, 0.8); border: 1px solid rgba(239, 68, 68, 0.5)"
+                        :disabled="resettingAssessment"
+                        @click="handleReset"
+                    >
+                        {{ resettingAssessment ? 'กำลังล้าง...' : 'ยืนยัน ล้างผล' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Transition>
 </template>
 
 <style scoped>
