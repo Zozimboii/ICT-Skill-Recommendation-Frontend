@@ -20,9 +20,16 @@ const {
     nextPage,
     searchMeta,
     dateRangeDb,
+    searchBy,
 } = useJobSearch();
 
 const hasLoaded = ref(false);
+const expandedSkills = ref<Set<number>>(new Set());
+const toggleSkills = (id: number) => {
+    if (expandedSkills.value.has(id)) expandedSkills.value.delete(id);
+    else expandedSkills.value.add(id);
+    expandedSkills.value = new Set(expandedSkills.value); // trigger reactivity
+};
 const fromSkillName = ref('');
 
 async function doSearch() {
@@ -32,8 +39,15 @@ async function doSearch() {
     await searchJobs();
 }
 
-// suggestion chips: คำที่ search บ่อย
-const suggestions = ['python', 'javascript', 'react', 'java', 'sql', 'network', 'devops', 'docker', 'aws', 'security', 'data analyst', 'frontend', 'backend', 'mobile'];
+const handlePrevPage = async () => {
+    await prevPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const handleNextPage = async () => {
+    await nextPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 // อ่าน query params และ set keyword/mode
 function applyRouteQuery() {
@@ -59,15 +73,7 @@ function applyRouteQuery() {
         keyword.value = fromSkillName.value || String(skillId ?? '');
     }
 }
-const handlePrevPage = async () => {
-    await prevPage();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
 
-const handleNextPage = async () => {
-    await nextPage();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};
 onMounted(async () => {
     await nextTick();
     await Promise.all([fetchCategories(), fetchDateRange()]);
@@ -95,6 +101,40 @@ watch(
             <h1 class="text-4xl font-bold text-white">Search Job</h1>
             <p class="text-lg text-slate-400 mt-1">ค้นหาตำแหน่งงาน ICT และดู skills ที่ต้องการ</p>
         </div>
+
+        <!-- Skill banner (มาจาก Trend) -->
+        <Transition name="fade">
+            <div
+                v-if="fromSkillName"
+                class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl flex-wrap"
+                style="background: rgba(42, 127, 212, 0.08); border: 1px solid rgba(42, 127, 212, 0.25)"
+            >
+                <div class="flex items-center gap-2.5">
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="#5bc4f5" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <div>
+                        <p class="text-lg font-semibold text-white">
+                            งานที่ต้องการ <span style="color: #5bc4f5">{{ fromSkillName }}</span>
+                        </p>
+                        <p class="text-base text-slate-300 mt-0.5">กำลังแสดงงานที่เกี่ยวข้อง · ค้นหาเพิ่มเติมได้ด้านล่าง</p>
+                    </div>
+                </div>
+                <button
+                    class="text-base text-slate-300 hover:text-white transition px-2 py-1 rounded-lg"
+                    style="border: 1px solid rgba(255, 255, 255, 0.08)"
+                    @click="
+                        fromSkillName = '';
+                        keyword = '';
+                        searchJobs();
+                    "
+                >
+                    ล้าง
+                </button>
+            </div>
+        </Transition>
 
         <!-- Search Panel -->
         <div class="rounded-2xl p-6 space-y-5" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
@@ -127,13 +167,30 @@ watch(
                 </button>
             </div>
 
+            <!-- Search by filter -->
+            <div v-if="searchMode === 'keyword'" class="flex gap-2">
+                <button
+                    v-for="opt in [
+                        { key: 'all', label: 'ทั้งหมด' },
+                        { key: 'title', label: 'ชื่องาน' },
+                        { key: 'skill', label: 'Skill' },
+                    ]"
+                    :key="opt.key"
+                    class="px-3 py-1.5 rounded-full text-base font-medium border transition-all"
+                    :style="searchBy === opt.key ? 'background:rgba(13,95,163,0.2); border-color:rgba(42,159,214,0.4); color:#5bc4f5' : 'border-color:rgba(255,255,255,0.08); color:#64748b'"
+                    @click="searchBy = opt.key as any"
+                >
+                    {{ opt.label }}
+                </button>
+            </div>
+
             <!-- Keyword -->
             <div v-if="searchMode === 'keyword'" class="space-y-2">
                 <div class="flex gap-2">
                     <input
                         v-model="keyword"
                         type="text"
-                        placeholder="ค้นหาชื่องาน, บริษัท..."
+                        :placeholder="searchBy === 'skill' ? 'ค้นหาด้วยชื่อ Skill เช่น Python, React...' : 'ค้นหาชื่องาน, บริษัท...'"
                         class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-lg transition-all"
                         style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)"
                         @focus="(e) => ((e.target as HTMLInputElement).style.borderColor = 'rgba(42,159,214,0.5)')"
@@ -271,7 +328,6 @@ watch(
                                 </svg>
                                 {{ job.location ?? 'Bangkok' }}
                             </span>
-                            <!-- วันที่จริง ขวาสุด -->
                             <span v-if="job.posted_date" class="shrink-0 text-base" style="color: #64748b">
                                 {{ new Date(job.posted_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) }}
                             </span>
@@ -283,22 +339,61 @@ watch(
                         {{ job.description }}
                     </p>
 
-                    <!-- Skills -->
-                    <div v-if="job.skills?.length" class="flex flex-wrap gap-2 mb-3">
-                        <span
-                            v-for="skill in job.skills"
-                            :key="skill.id"
-                            class="px-3 py-1 text-base font-medium rounded-full"
-                            :style="
-                                skill.skill_type === 'hard_skill'
-                                    ? 'border:1px solid rgba(42,159,214,0.35); color:#5bc4f5; background:rgba(13,95,163,0.15);'
-                                    : 'border:1px solid rgba(76,175,80,0.3); color:#81c784; background:rgba(76,175,80,0.08);'
-                            "
-                        >
-                            {{ skill.name }}
-                        </span>
-                        <span v-if="job.skills.length > 6" class="text-base text-slate-500 self-center"> +{{ job.skills.length - 6 }} more </span>
-                    </div>
+                    <!-- Skills แยก Hard / Soft + expand -->
+                    <template v-if="job.skills?.length">
+                        <div class="space-y-2 mb-3">
+                            <!-- Hard Skills -->
+                            <div v-if="job.skills.filter((s) => s.skill_type === 'hard_skill').length">
+                                <p class="mb-1.5 uppercase font-semibold text-slate-500" style="font-size: 11px; letter-spacing: 0.08em">Hard Skills</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span
+                                        v-for="skill in expandedSkills.has(job.id)
+                                            ? job.skills.filter((s) => s.skill_type === 'hard_skill')
+                                            : job.skills.filter((s) => s.skill_type === 'hard_skill').slice(0, 5)"
+                                        :key="skill.id"
+                                        class="px-3 py-1 text-base font-medium rounded-full transition-all"
+                                        :style="
+                                            keyword && skill.name.toLowerCase().includes(keyword.toLowerCase())
+                                                ? 'border:2px solid rgba(42,159,214,0.8); color:#fff; background:rgba(13,95,163,0.4); font-weight:700'
+                                                : 'border:1px solid rgba(42,159,214,0.35); color:#5bc4f5; background:rgba(13,95,163,0.15)'
+                                        "
+                                        >{{ skill.name }}</span
+                                    >
+                                </div>
+                            </div>
+                            <!-- Soft Skills -->
+                            <div v-if="job.skills.filter((s) => s.skill_type === 'soft_skill').length">
+                                <p class="mb-1.5 uppercase font-semibold text-slate-500" style="font-size: 11px; letter-spacing: 0.08em">Soft Skills</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span
+                                        v-for="skill in expandedSkills.has(job.id)
+                                            ? job.skills.filter((s) => s.skill_type === 'soft_skill')
+                                            : job.skills.filter((s) => s.skill_type === 'soft_skill').slice(0, 3)"
+                                        :key="skill.id"
+                                        class="px-3 py-1 text-base font-medium rounded-full"
+                                        style="border: 1px solid rgba(76, 175, 80, 0.3); color: #81c784; background: rgba(76, 175, 80, 0.08)"
+                                        >{{ skill.name }}</span
+                                    >
+                                </div>
+                            </div>
+                            <!-- Toggle button — แสดงเฉพาะเมื่อมี skills เกิน threshold -->
+                            <button
+                                v-if="job.skills.filter((s) => s.skill_type === 'hard_skill').length > 5 || job.skills.filter((s) => s.skill_type === 'soft_skill').length > 3"
+                                class="flex items-center gap-1.5 text-base transition-all mt-1"
+                                :style="expandedSkills.has(job.id) ? 'color:#64748b' : 'color:#5bc4f5'"
+                                @click.stop="toggleSkills(job.id)"
+                            >
+                                <template v-if="!expandedSkills.has(job.id)">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9" /></svg>
+                                    ดู skills ทั้งหมด ({{ job.skills.length }})
+                                </template>
+                                <template v-else>
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15" /></svg>
+                                    ย่อลง
+                                </template>
+                            </button>
+                        </div>
+                    </template>
 
                     <!-- Link -->
                     <a
@@ -318,7 +413,6 @@ watch(
                 </div>
             </div>
         </template>
-
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="flex justify-center items-center gap-3 pt-4">
             <button

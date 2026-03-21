@@ -1,4 +1,3 @@
-<!-- pages/index.vue — Skill Trends (redesigned for clarity) -->
 <script setup lang="ts">
 import { useTrend } from '@/composables/useTrend';
 import JobTrendChart from '@/components/Trend/JobTrendChart.vue';
@@ -58,7 +57,6 @@ async function handleBlockSkillClick(skillId: number, skillName: string) {
     onSkillClick(skillId);
     await fetchJobsBySkill(skillId);
     selectedJobs.value = jobsBySkill.value;
-    // showModal.value = true;
 }
 
 async function handleSearchAllJobs() {
@@ -80,7 +78,6 @@ async function handleSearchAllJobs() {
     }
 }
 
-// Handle "ดูงาน" button from JobTrendChart → fetch jobs by category and hand back via callback
 async function handleViewJobs(category: string, callback: (jobs: any[]) => void) {
     try {
         const jobs = await fetchJobsByCategory(category);
@@ -229,9 +226,6 @@ onMounted(async () => {
             </ClientOnly>
         </template>
 
-        <!-- ══════════════════════════════════════════
-             MODAL: Jobs that require this skill
-        ══════════════════════════════════════════ -->
         <Transition name="modal">
             <div
                 v-if="showModal"

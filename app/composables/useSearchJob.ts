@@ -15,6 +15,7 @@ export const useJobSearch = () => {
     const keyword = ref('');
     const selectedSubCategory = ref('all');
     const subCategories = ref<string[]>([]);
+    const searchBy = ref<'all' | 'title' | 'skill'>('all'); // filter scope
 
     // dateRangeDb — แสดง range ใน UI (ไม่กรอง)
     const dateRangeDb = ref<JobDateRange>({ min_date: null, max_date: null });
@@ -48,6 +49,10 @@ export const useJobSearch = () => {
         }
         if (searchMode.value === 'dropdown' && selectedSubCategory.value !== 'all') {
             q.sub_category = selectedSubCategory.value;
+        }
+        // search scope filter
+        if (searchBy.value !== 'all') {
+            q.search_by = searchBy.value;
         }
         return q;
     };
@@ -121,6 +126,7 @@ export const useJobSearch = () => {
         totalPages,
         searchMeta,
         dateRangeDb,
+        searchBy,
         fetchCategories,
         fetchDateRange,
         searchJobs,
