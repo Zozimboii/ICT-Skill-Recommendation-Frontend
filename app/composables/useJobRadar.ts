@@ -43,45 +43,67 @@ function findGap(rec: RecommendationItem, skillGap: SkillGapResponse[]) {
     );
 }
 
+function uniqueSkills(skills: any[]) {
+    const map = new Map();
+
+    for (const s of skills) {
+        if (!map.has(s.name)) {
+            map.set(s.name, s);
+        }
+    }
+
+    return Array.from(map.values());
+}
+
 // ── สร้าง skills list จาก gap (hard first) ─────────────────────────
-function buildSkillList(gap: SkillGapResponse, maxSkills: number) {
-    const matchedHard = gap.matched_skills.filter((s) => s.skill_type === 'hard_skill' && isValidSkillName(s.skill_name)).slice(0, Math.ceil(maxSkills * 0.55));
+function buildSkillList(gap: SkillGapResponse) {
+    const matchedHard = gap.matched_skills
+        .filter((s) => s.skill_type === 'hard_skill' && isValidSkillName(s.skill_name))
+        .map((s) => ({
+            name: s.skill_name,
+            have: true,
+            score: s.frequency_score != null ? Math.round(s.frequency_score * 100) : 80,
+        }));
 
-    const matchedSoft = gap.matched_skills.filter((s) => s.skill_type === 'soft_skill' && isValidSkillName(s.skill_name)).slice(0, Math.ceil(maxSkills * 0.25));
+    const matchedSoft = gap.matched_skills
+        .filter((s) => s.skill_type === 'soft_skill' && isValidSkillName(s.skill_name))
+        .map((s) => ({
+            name: s.skill_name,
+            have: true,
+            score: s.frequency_score != null ? Math.round(s.frequency_score * 100) : 75,
+        }));
 
-    const missingRequired = gap.missing_skills
+    const missing = gap.missing_skills
         .filter((s) => (s.importance === 'required' || s.importance === 'recommended') && isValidSkillName(s.skill_name))
-        .slice(0, maxSkills - matchedHard.length - matchedSoft.length);
+        .map((s) => ({
+            name: s.skill_name,
+            have: false,
+            score: 0,
+            type: s.skill_type,
+        }));
 
-    return {
-        hard: [
-            ...matchedHard.map((s) => ({
-                name: s.skill_name,
-                have: true,
-                score: s.frequency_score != null ? Math.round(s.frequency_score * 100) : 80,
-            })),
-            ...missingRequired.filter((s) => s.skill_type === 'hard_skill').map((s) => ({ name: s.skill_name, have: false, score: 0 })),
-        ],
-        soft: [
-            ...matchedSoft.map((s) => ({
-                name: s.skill_name,
-                have: true,
-                score: s.frequency_score != null ? Math.round(s.frequency_score * 100) : 75,
-            })),
-            ...missingRequired.filter((s) => s.skill_type === 'soft_skill').map((s) => ({ name: s.skill_name, have: false, score: 0 })),
-        ],
-    };
+    const hard = uniqueSkills([
+        ...matchedHard,
+        ...missing.filter((s) => s.type === 'hard_skill'),
+    ]).sort((a, b) => b.score - a.score);
+
+    const soft = uniqueSkills([
+        ...matchedSoft,
+        ...missing.filter((s) => s.type === 'soft_skill'),
+    ]).sort((a, b) => b.score - a.score);
+
+    return { hard, soft };
 }
 
 /**
  * buildRadarData — รวม hard+soft ไว้ใน dataset เดียว (สำหรับ assessment)
  */
-export function buildRadarData(rec: RecommendationItem, skillGap: SkillGapResponse[], maxSkills = 12): RadarDataset | null {
+export function buildRadarData(rec: RecommendationItem, skillGap: SkillGapResponse[]): RadarDataset | null {
     const gap = findGap(rec, skillGap);
 
     if (gap) {
-        const { hard, soft } = buildSkillList(gap, maxSkills);
-        const all = [...hard, ...soft].slice(0, maxSkills);
+        const { hard, soft } = buildSkillList(gap);
+        const all = [...hard, ...soft];
         if (all.length < 3) return null;
         return {
             labels: all.map((s) => s.name),
@@ -91,7 +113,7 @@ export function buildRadarData(rec: RecommendationItem, skillGap: SkillGapRespon
     }
 
     if (rec.total_skill_count < 3) return null;
-    const total = Math.min(rec.total_skill_count, maxSkills);
+    const total = Math.min(rec.total_skill_count);
     const matched = Math.min(rec.matched_count, total);
     return {
         labels: Array.from({ length: total }, (_, i) => `Skill ${i + 1}`),
@@ -103,14 +125,14 @@ export function buildRadarData(rec: RecommendationItem, skillGap: SkillGapRespon
 /**
  * buildRadarDataSplit — แยก hard/soft สำหรับ dashboard radar (2 charts)
  */
-export function buildRadarDataSplit(rec: RecommendationItem, skillGap: SkillGapResponse[], maxPerType = 8): RadarDatasetSplit | null {
+export function buildRadarDataSplit(rec: RecommendationItem, skillGap: SkillGapResponse[]): RadarDatasetSplit | null {
     const gap = findGap(rec, skillGap);
     if (!gap) return null;
 
-    const { hard, soft } = buildSkillList(gap, maxPerType * 2);
+    const { hard, soft } = buildSkillList(gap);
 
-    const h = hard.slice(0, maxPerType);
-    const s = soft.slice(0, maxPerType);
+    const h = hard;
+    const s = soft;
 
     if (h.length < 3 && s.length < 3) return null;
 

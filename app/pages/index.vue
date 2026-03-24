@@ -4,7 +4,7 @@ import JobTrendChart from '@/components/Trend/JobTrendChart.vue';
 import SkillTrendChart from '@/components/Trend/SkillTrendChart.vue';
 import SkillBlockPanel from '@/components/Trend/SkillBlockPanel.vue';
 import SankeyChart from '@/components/Trend/SankeyChart.vue';
-
+import {useJobSearch} from '@/composables/useSearchJob';
 useHead({ title: 'ICT Skill Trends' });
 
 const {
@@ -33,7 +33,10 @@ const {
     fetchJobsByCategory,
     jobsByCategory,
 } = useTrend();
-
+const {
+    fetchDateRange,
+    dateRangeDb,
+} = useJobSearch();
 const selectedJobs = ref<any[]>([]);
 const showModal = ref(false);
 const selectedSkillName = ref('');
@@ -91,6 +94,7 @@ async function onSankeyNodeClick(subCategory: string) {
 }
 
 onMounted(async () => {
+    fetchDateRange()
     await nextTick();
     await loadInitial();
     await nextTick();
@@ -118,6 +122,13 @@ onMounted(async () => {
                 </div>
                 <h1 class="text-6xl font-bold text-white">ICT Skill Trends</h1>
                 <p class="text-slate-400 text-lg mt-1">วิเคราะห์ทักษะที่นายจ้างต้องการในตลาดงาน ICT ไทย</p>
+                <p class="text-base text-slate-300">
+                    ข้อมูลอ้างอิงวันที่
+                    <template v-if="dateRangeDb.min_date && dateRangeDb.max_date">
+                        {{ new Date(dateRangeDb.min_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) }}
+                        - {{ new Date(dateRangeDb.max_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) }}
+                    </template>
+                </p>
             </div>
             <button
                 class="self-start flex items-center gap-2 px-4 py-2 rounded-xl text-lg font-semibold transition-all"
@@ -192,7 +203,7 @@ onMounted(async () => {
                     <h2 class="text-xl font-bold uppercase tracking-widest" style="color: rgba(148, 163, 184, 0.5)">ภาพรวมตลาดงาน</h2>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div class="rounded-2xl p-5" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                            <p class="text-base text-slate-400 mb-3">จำนวนงานแต่ละสาย · คลิกเพื่อกรอง · กด "ดูงาน" เพื่อดูรายชื่อ</p>
+                            <p class="text-base text-slate-400 mb-3">จำนวนตำแหน่งงาน · คลิกเพื่อดูSkills  · กดงานด้านล่างเพื่อดูตำแหน่งงานที่รับสมัคร</p>
                             <JobTrendChart
                                 v-if="jobTrend.length"
                                 :series="jobChartSeries"
@@ -210,7 +221,7 @@ onMounted(async () => {
                         </div>
 
                         <div class="rounded-2xl p-5" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
-                            <p class="text-lg text-slate-500 mb-3">Skill ยอดนิยม · คลิกเพื่อดูงาน</p>
+                            <p class="text-lg text-slate-500 mb-3">Skill ทั้งหมด · คลิกเพื่อดูสายงาน</p>
                             <SkillBlockPanel :skills="skillBlockData" :selectedSkillId="selectedSkillId" :selectedCategory="selectedCategory" @skill-click="handleBlockSkillClick" />
                         </div>
                     </div>

@@ -42,14 +42,14 @@ const handleReset = async () => {
     }
 };
 
-const scoreLabels = ['ยังไม่ถนัด', 'น้อย', 'พอใช้', 'ปานกลาง', 'เก่ง', 'เชี่ยวชาญ'];
+const scoreLabels = ['ไม่ถนัด', 'น้อย', 'พอใช้', 'ปานกลาง', 'เก่ง', 'เชี่ยวชาญ'];
 const scoreColors = ['rgba(148,163,184,0.15)', 'rgba(239,68,68,0.15)', 'rgba(251,191,36,0.15)', 'rgba(59,130,246,0.15)', 'rgba(34,197,94,0.15)', 'rgba(76,175,80,0.25)'];
 const scoreTextClrs = ['#94a3b8', '#f87171', '#fbbf24', '#60a5fa', '#4ade80', '#81c784'];
 
 const demandStyle = (weight: number) => {
-    if (weight >= 70) return { label: 'ต้องการสูง', color: '#f87171', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)' };
-    if (weight >= 40) return { label: 'ต้องการปานกลาง', color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.25)' };
-    return { label: 'ต้องการน้อย', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' };
+    if (weight >= 70) return { label: 'ต้องการทักษะสูง', color: '#f87171', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)' };
+    if (weight >= 40) return { label: 'ต้องการทักษะปานกลาง', color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.25)' };
+    return { label: 'ต้องการทักษะน้อย', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' };
 };
 
 const route = useRoute();
@@ -375,7 +375,7 @@ const goDashboard = async () => {
                 style="background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.2)"
             >
                 <div>
-                    <p class="text-lg font-bold text-white">ลองทำ Assessment ได้เลยโดยไม่ต้อง Login</p>
+                    <p class="text-lg font-bold text-white">ทดลองทำ Assessment</p>
                     <p class="text-base text-slate-400 mt-0.5">
                         ดูผล match score และ skill gap ได้ทันที ·
                         <span style="color: #fbbf24">Login เพื่อบันทึกผลและดูงานแนะนำ</span>
@@ -632,7 +632,7 @@ const goDashboard = async () => {
                                 <span class="absolute inset-0 flex items-center justify-center text-xl font-extrabold" :style="`color:${matchColor}`">{{ matchPercent }}%</span>
                             </div>
                             <div>
-                                <p class="font-bold text-white text-lg">ความเข้ากับตำแหน่ง</p>
+                                <p class="font-bold text-white text-lg">ความเข้ากันของตำแหน่งงาน</p>
                                 <p class="text-base text-slate-400 mt-1">
                                     {{
                                         matchPercent >= 70 ? 'โปรไฟล์แข็งแกร่ง' : matchPercent >= 40 ? 'เริ่มต้นดี เติมอีกนิด' : answeredCount === 0 ? 'ให้คะแนน skills เพื่อดูผล' : 'ยังมีช่องว่างอยู่'
@@ -661,7 +661,7 @@ const goDashboard = async () => {
 
                     <!-- Skill gaps -->
                     <div v-if="gaps.length" class="rounded-2xl p-4" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
-                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">ควรพัฒนาก่อน</p>
+                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">ทักษะที่ควรพัฒนา</p>
                         <div class="space-y-3">
                             <div v-for="g in gaps" :key="g.name">
                                 <div class="flex justify-between text-base mb-1">
@@ -684,7 +684,7 @@ const goDashboard = async () => {
 
                     <!-- Priority skills to develop -->
                     <div v-if="prioritySkills.length" class="rounded-2xl p-4" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
-                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">ควรพัฒนาตามลำดับนี้</p>
+                        <p class="text-base font-bold uppercase tracking-widest mb-3 text-slate-500">ควรพัฒนาทักษะตามลำดับนี้</p>
                         <div class="space-y-2">
                             <div
                                 v-for="(s, i) in prioritySkills"

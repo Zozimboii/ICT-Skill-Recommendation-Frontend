@@ -11,7 +11,7 @@ const emit = defineEmits<{
     (e: 'skill-click', skillId: number, skillName: string): void;
 }>();
 
-const displaySkills = computed(() => props.skills.slice(0, 24));
+const displaySkills = computed(() => props.skills);
 </script>
 
 <template>
@@ -20,7 +20,7 @@ const displaySkills = computed(() => props.skills.slice(0, 24));
         <div class="flex items-center justify-between mb-4 shrink-0">
             <h3 class="text-xl font-bold text-white">
                 {{ selectedCategory ? `Skills ใน "${selectedCategory}"` : 'Hard Skills' }}
-                <span class="text-slate-400 text-sm ml-1">({{ skills.length }})</span>
+                <span class="text-slate-400 text-sm ml-1">({{ displaySkills.length }})</span>
             </h3>
 
             <span v-if="selectedCategory" class="text-sm px-3 py-1 rounded-full font-semibold" style="background: rgba(13, 95, 163, 0.2); border: 1px solid rgba(42, 159, 214, 0.35); color: #5bc4f5">

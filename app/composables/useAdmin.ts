@@ -25,6 +25,12 @@ export function useAdmin() {
         return data.value ?? null;
     }
 
+    async function deleteUser(userId: number): Promise<void> {
+        await apiFetch(`${BASE_URL}/users/${userId}/delete`, {
+            method: 'DELETE',
+        });
+    }
+
     async function getJobs(params?: { keyword?: string; skip?: number; limit?: number }): Promise<AdminJobListResponse> {
         const { data, error } = await useApiFetch<AdminJobListResponse>(`${BASE_URL}/jobs`, {
             query: params,
@@ -77,5 +83,6 @@ export function useAdmin() {
         createSkill,
         deleteSkill,
         triggerScrape,
+        deleteUser,
     };
 }

@@ -142,7 +142,7 @@ watch(
                 <h2 class="font-bold text-2xl text-white mb-0.5">ค้นหาข้อมูลตำแหน่งงาน</h2>
                 <p class="text-base text-slate-400 mb-1">เลือกวิธีค้นหาที่ต้องการด้านล่าง</p>
                 <p class="text-base text-slate-300">
-                    ข้อมูลอ้างอิงช่วงวันที่
+                    ข้อมูลตำแหน่งงานอ้างอิงช่วงวันที่
                     <template v-if="dateRangeDb.min_date && dateRangeDb.max_date">
                         {{ new Date(dateRangeDb.min_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) }}
                         - {{ new Date(dateRangeDb.max_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) }}
@@ -156,7 +156,7 @@ watch(
                 <button
                     v-for="m in [
                         { key: 'keyword', label: 'พิมพ์คำค้นหา' },
-                        { key: 'dropdown', label: 'เลือกจากรายการ' },
+                        { key: 'dropdown', label: 'รายการ' },
                     ]"
                     :key="m.key"
                     class="px-4 py-2 rounded-full text-base font-semibold border transition-all"
@@ -172,7 +172,7 @@ watch(
                 <button
                     v-for="opt in [
                         { key: 'all', label: 'ทั้งหมด' },
-                        { key: 'title', label: 'ชื่องาน' },
+                        { key: 'title', label: 'ชื่อตำแหน่งงาน' },
                         { key: 'skill', label: 'Skill' },
                     ]"
                     :key="opt.key"
@@ -190,7 +190,7 @@ watch(
                     <input
                         v-model="keyword"
                         type="text"
-                        :placeholder="searchBy === 'skill' ? 'ค้นหาด้วยชื่อ Skill เช่น Python, React...' : 'ค้นหาชื่องาน, บริษัท...'"
+                        :placeholder="searchBy === 'skill' ? 'ค้นหาด้วยชื่อ Skill เช่น Python, React...' : 'ค้นหาชื่อตำแหน่งงาน, บริษัท...'"
                         class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-lg transition-all"
                         style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)"
                         @focus="(e) => ((e.target as HTMLInputElement).style.borderColor = 'rgba(42,159,214,0.5)')"

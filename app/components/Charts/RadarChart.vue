@@ -80,6 +80,7 @@ function render() {
                         font: { size: props.labelFontSize, weight: 'bold' as const },
                         // padding รอบ label
                         padding: props.compact ? 4 : 8,
+                        callback:(label) => label
                     },
                 },
             },

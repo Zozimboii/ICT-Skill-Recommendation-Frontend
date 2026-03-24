@@ -161,7 +161,7 @@ const detailTab = ref<DetailTab>('skills');
                     <div class="h-0.5 w-10 rounded-full mb-4" style="background: linear-gradient(90deg, #0d5fa3, #4caf50)" />
                     <div class="flex flex-wrap justify-between items-start gap-4">
                         <div>
-                            <p class="text-base uppercase tracking-widest text-slate-300 mb-1">มหาวิทยาลัย</p>
+                            <p class="text-base uppercase tracking-widest text-slate-300 mb-1">มหาวิทยาลัยเกษตรศาสตร์</p>
                             <p class="font-bold text-2xl text-white">{{ transcript.university ?? '-' }}</p>
                             <p class="text-lg text-slate-400 mt-1">{{ transcript.major ?? '-' }}</p>
                         </div>
@@ -184,7 +184,7 @@ const detailTab = ref<DetailTab>('skills');
                         </div>
                         <div class="text-center">
                             <p class="text-2xl font-bold text-white">{{ transcript.courses?.length ?? 0 }}</p>
-                            <p class="text-base text-slate-400 mt-0.5">วิชาเรียน</p>
+                            <p class="text-base text-slate-400 mt-0.5">จำนวนรายวิชาที่เรียน</p>
                         </div>
                     </div>
                 </div>
@@ -193,8 +193,8 @@ const detailTab = ref<DetailTab>('skills');
                 <div class="flex gap-1 p-1 rounded-2xl w-fit" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
                     <button
                         v-for="tab in [
-                            { key: 'skills', label: 'Skills ที่ดึงได้' },
-                            { key: 'courses', label: 'วิชาเรียน' },
+                            { key: 'skills', label: 'Skills ที่วิเคราะห์ได้' },
+                            { key: 'courses', label: 'รายวิชา' },
                         ]"
                         :key="tab.key"
                         class="px-5 py-2.5 rounded-xl text-base font-semibold transition-all"
@@ -208,7 +208,7 @@ const detailTab = ref<DetailTab>('skills');
                 <!-- Tab: Skills ที่ดึงได้ -->
                 <template v-if="detailTab === 'skills'">
                     <!-- Context note -->
-                    <p class="text-base text-slate-300 -mt-2">ระบบดึง skills เหล่านี้จากชื่อวิชาและเนื้อหาใน Transcript โดยอัตโนมัติ</p>
+                    <p class="text-base text-slate-300 -mt-2">ระบบวิเคราะห์ skills เหล่านี้จากชื่อรายวิชาและเนื้อหาใน Transcript โดยอัตโนมัติ</p>
                     <div class="space-y-4">
                         <div v-if="hardSkills.length" class="rounded-2xl p-5" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
                             <p class="text-base font-bold uppercase tracking-widest mb-3" style="color: #5bc4f5">Hard Skills — ทักษะเทคนิค ({{ hardSkills.length }})</p>

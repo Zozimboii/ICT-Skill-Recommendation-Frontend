@@ -198,7 +198,7 @@ watch(
                                 อัปโหลด Transcript
                             </NuxtLink>
                         </div>
-                        <p class="text-base text-slate-600">อิงจากคะแนนที่ให้ไว้ — อัปโหลด Transcript เพื่อความแม่นยำมากขึ้น</p>
+                        <p class="text-base text-slate-600">อ้างอิงจากคะแนนที่ให้ไว้ — อัปโหลด Transcript เพื่อความแม่นยำมากขึ้น</p>
                     </template>
                 </div>
             </Transition>
@@ -261,8 +261,8 @@ watch(
                     <div
                         v-for="card in [
                             { label: 'GPA', value: summary?.gpa?.toFixed(2) ?? '-', sub: summary?.university ?? 'ไม่มีข้อมูล' },
-                            { label: 'Hard Skills', value: String(summary?.hard_skill_count ?? 0), sub: 'ทักษะเทคนิค' },
-                            { label: 'Soft Skills', value: String(summary?.soft_skill_count ?? 0), sub: 'ทักษะสังคม' },
+                            { label: 'Hard Skills', value: String(summary?.hard_skill_count ?? 0), sub: 'ทักษะทางเทคนิค' },
+                            { label: 'Soft Skills', value: String(summary?.soft_skill_count ?? 0), sub: 'ทักษะทางสังคม' },
                             { label: 'Match เฉลี่ย', value: `${avgMatch}%`, sub: `${recommendations.length} งานแนะนำ` },
                         ]"
                         :key="card.label"
@@ -343,7 +343,10 @@ watch(
                             <p class="text-lg font-bold text-white">งานที่ตรงที่สุด</p>
                             <template v-if="recommendations.length">
                                 <div
-                                    v-for="rec in recommendations.slice(0, 3)"
+                                    v-for="rec in recommendations
+                                    .slice()
+                                    .sort((a, b) => b.skill_match_percent - a.skill_match_percent)
+                                    .slice(0, 3)"
                                     :key="rec.id"
                                     class="flex items-center justify-between gap-3 p-3 rounded-xl"
                                     style="background: rgba(13, 95, 163, 0.06); border: 1px solid rgba(42, 127, 212, 0.1)"
@@ -389,7 +392,7 @@ watch(
                         <div class="rounded-2xl p-6" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
                             <div class="flex items-start justify-between mb-4 gap-3">
                                 <div>
-                                    <p class="font-bold text-white text-lg">Hard Skills — ทักษะเทคนิค</p>
+                                    <p class="font-bold text-white text-lg">Hard Skills — ทักษะทางเทคนิค</p>
                                     <p class="text-base text-slate-500 mt-0.5">
                                         ที่ตรงกับงานแนะนำ {{ hardSkillsFromGap.length }}
                                         <span class="text-slate-600 mx-1">·</span>
@@ -417,7 +420,7 @@ watch(
                         <div class="rounded-2xl p-6" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.2)">
                             <div class="flex items-start justify-between mb-4 gap-3">
                                 <div>
-                                    <p class="font-bold text-white text-lg">Soft Skills — ทักษะสังคม</p>
+                                    <p class="font-bold text-white text-lg">Soft Skills — ทักษะทางสังคม</p>
                                     <p class="text-base text-slate-500 mt-0.5">
                                         ที่ตรงกับงานแนะนำ {{ softSkillsFromGap.length }}
                                         <span class="text-slate-600 mx-1">·</span>
@@ -463,7 +466,8 @@ watch(
                     <div v-if="recommendations.length" class="space-y-3">
                         <p class="text-base text-slate-500">งานที่ตรงกับทักษะของคุณ {{ recommendations.length }} ตำแหน่ง</p>
                         <div
-                            v-for="(rec, i) in recommendations"
+                            v-for="(rec, i) in recommendations .slice()
+                            .sort((a, b) => b.skill_match_percent - a.skill_match_percent)"
                             :key="rec.id"
                             class="rounded-2xl p-5 transition-all"
                             style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)"
@@ -496,20 +500,8 @@ watch(
                                         <span class="text-base font-bold shrink-0" style="color: #5bc4f5"> {{ Math.round(rec.skill_match_percent) }}% </span>
                                     </div>
                                     <p class="text-base text-slate-500 mt-2">
-                                        มีทักษะตรง <span class="font-semibold text-white">{{ rec.matched_count }}</span> จาก
-                                        <span class="font-semibold text-white">{{ rec.total_skill_count }}</span> ทักษะหลัก
-                                        <span
-                                            class="ml-1.5 px-2 py-0.5 rounded-full text-base"
-                                            :style="
-                                                rec.skill_match_percent >= 60
-                                                    ? 'background:rgba(76,175,80,0.1);color:#4caf50'
-                                                    : rec.skill_match_percent >= 30
-                                                      ? 'background:rgba(251,191,36,0.1);color:#fbbf24'
-                                                      : 'background:rgba(148,163,184,0.1);color:#94a3b8'
-                                            "
-                                        >
-                                            {{ rec.skill_match_percent >= 60 ? 'ตรงมาก' : rec.skill_match_percent >= 30 ? 'ตรงดี' : 'กำลังพัฒนา' }}
-                                        </span>
+                                        มีทักษะมีความสอดคล้องกัน <span class="font-semibold text-white">{{ rec.matched_count }}</span> จาก
+                                        <span class="font-semibold text-white">{{ rec.total_skill_count }}</span> ทักษะ
                                     </p>
                                 </div>
                                 <div class="shrink-0 relative w-14 h-14">
@@ -690,13 +682,13 @@ watch(
                                     </p>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-base text-slate-500">ทักษะที่มีตรง</p>
+                                    <p class="text-base text-slate-500">ผลการเปรียบเทียบทักษะ</p>
                                     <p class="text-3xl font-extrabold" style="color: #5bc4f5">{{ gap.matched_count }}/{{ gap.total_job_skills }}</p>
                                     <p
                                         class="text-base mt-1"
                                         :style="gap.matched_count >= gap.total_job_skills * 0.6 ? 'color:#4caf50' : gap.matched_count >= gap.total_job_skills * 0.3 ? 'color:#fbbf24' : 'color:#94a3b8'"
                                     >
-                                        {{ gap.matched_count >= gap.total_job_skills * 0.6 ? 'ตรงมาก' : gap.matched_count >= gap.total_job_skills * 0.3 ? 'เริ่มต้นดี' : 'ยังต้องเรียนเพิ่ม' }}
+                                        {{ gap.matched_count >= gap.total_job_skills * 0.6 ? 'มาก(เริ่ด)' : gap.matched_count >= gap.total_job_skills * 0.3 ? 'ปลานกลาง(อาจจะยัง)' : 'น้อย(ไว้ก่อน)' }}
                                     </p>
                                 </div>
                             </div>
@@ -708,26 +700,13 @@ watch(
                                 />
                             </div>
 
-                            <div class="flex flex-wrap gap-3">
-                                <div class="rounded-xl px-4 py-2 text-base" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2)">
-                                    <span class="text-red-400 font-semibold">ขาด</span>
-                                    <span class="text-white font-bold mx-1">{{ gap.missing_group_count }}</span>
-                                    <span class="text-slate-400">กลุ่มทักษะ</span>
-                                </div>
-                                <div class="rounded-xl px-4 py-2 text-base" style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)">
-                                    <span style="color: #5bc4f5">ควรเรียนก่อน</span>
-                                    <span class="text-white font-bold mx-1">{{ gap.missing_skills.filter((s) => s.importance === 'required').length }}</span>
-                                    <span class="text-slate-400">ทักษะสำคัญ</span>
-                                </div>
-                            </div>
-
                             <!-- View tabs -->
                             <div class="flex gap-2 flex-wrap">
                                 <button
                                     v-for="m in [
-                                        { key: 'top10', label: 'สำคัญที่สุด' },
-                                        { key: 'grouped', label: 'แบ่งกลุ่ม' },
-                                        { key: 'roadmap', label: 'แผนการเรียน' },
+                                        { key: 'top10', label: 'ความสำคัญของทักษะ' },
+                                        { key: 'grouped', label: 'กลุ่มของทักษะ' },
+                                        { key: 'roadmap', label: 'แผนการเพิ่มทักษะ' },
                                     ]"
                                     :key="m.key"
                                     class="px-3 py-1.5 rounded-lg text-base font-semibold border transition-all"
@@ -751,7 +730,7 @@ watch(
                                 <div v-for="tier in ['required', 'recommended', 'optional']" :key="tier" class="mb-3">
                                     <template v-if="gap.missing_skills.filter((s) => s.importance === tier).length">
                                         <p class="text-base font-semibold mb-2" :style="tier === 'required' ? 'color:#f87171' : tier === 'recommended' ? 'color:#fbbf24' : 'color:#94a3b8'">
-                                            {{ tier === 'required' ? 'จำเป็นต้องมี' : tier === 'recommended' ? 'ควรมี' : 'มีก็ดี' }}
+                                            {{ tier === 'required' ? 'ทักษะที่จำเป็น' : tier === 'recommended' ? 'ทักษะที่ควรมี' : 'ทักษะที่แนะนำ' }}
                                         </p>
                                         <div class="flex flex-wrap gap-2">
                                             <span
@@ -810,8 +789,7 @@ watch(
                                         <div class="flex-1 rounded-xl p-4 min-w-0" :style="`border:1px solid rgba(42,127,212,0.15); ${stepBg[step.priority]}`">
                                             <div class="flex items-start justify-between gap-2 flex-wrap mb-2">
                                                 <div>
-                                                    <p class="text-lg font-bold text-white">{{ step.title }}</p>
-                                                    <p class="text-base text-slate-500 mt-0.5">{{ step.group }}</p>
+                                                    <p class="font-bold text-slate-100 text-xl ">{{ step.group }}</p>
                                                 </div>
                                                 <span class="text-base px-2 py-0.5 rounded-full shrink-0" :style="importanceStyle[step.priority]">
                                                     {{ step.priority === 'required' ? 'จำเป็น' : step.priority === 'recommended' ? 'แนะนำ' : 'เสริม' }}

@@ -26,7 +26,7 @@ export function useTrend() {
         jobTrend.value = data.value ?? [];
     }
 
-    async function fetchSkillTrend(limit = 10, skillType: string | null = 'hard_skill') {
+    async function fetchSkillTrend(limit = 999, skillType: string | null = 'hard_skill') {
         const { data, error: fetchError } = await useApiFetch<SkillTrendItem[]>(`${BASE_URL}/skills`, {
             query: { limit, skill_type: skillType },
         });
@@ -42,7 +42,7 @@ export function useTrend() {
         crossData.value = data.value ?? null;
     }
 
-    async function fetchSkillsByCategory(subCategory: string, limit = 30) {
+    async function fetchSkillsByCategory(subCategory: string, limit = 999) {
         const { data, error: fetchError } = await useApiFetch<SkillByCategoryItem[]>(`${BASE_URL}/skills/by-category`, {
             query: { sub_category: subCategory, limit, skill_type: 'hard_skill' },
         });
@@ -51,7 +51,7 @@ export function useTrend() {
     }
 
     // fetch sankey data — tracks own loading state
-    async function fetchSankeyData(topCategories = 10, topSkills = 6) {
+    async function fetchSankeyData(topCategories = 999, topSkills = 999) {
         sankeyLoading.value = true;
         try {
             const { data, error: fetchError } = await useApiFetch<SankeyLink[]>(`${BASE_URL}/sankey`, {
@@ -72,7 +72,7 @@ export function useTrend() {
         loading.value = true;
         error.value = null;
         try {
-            await Promise.all([fetchJobTrend(), fetchSkillTrend(20, 'hard_skill')]);
+            await Promise.all([fetchJobTrend(), fetchSkillTrend(undefined, 'hard_skill')]);
         } catch (e: any) {
             error.value = e.message || 'Failed to fetch trend data';
         } finally {
@@ -86,7 +86,7 @@ export function useTrend() {
         sankeyLoading.value = true;
         error.value = null;
         try {
-            await Promise.all([fetchJobTrend(), fetchSkillTrend(20, 'hard_skill'), fetchSankeyData(8, 4)]);
+            await Promise.all([fetchJobTrend(), fetchSkillTrend(undefined, 'hard_skill'), fetchSankeyData(999, 999)]);
         } catch (e: any) {
             error.value = e.message || 'Failed to fetch trend data';
         } finally {
@@ -178,7 +178,7 @@ export function useTrend() {
     async function fetchJobsByCategory(subCategory: string): Promise<any[]> {
         if (jobsByCategory.value[subCategory]) return jobsByCategory.value[subCategory];
         const { data, error: fetchError } = await useApiFetch<any[]>('/api/v1/jobs/search', {
-            query: { sub_category: subCategory, limit: 20 },
+            query: { sub_category: subCategory },
         });
         if (fetchError.value) throw fetchError.value;
         const jobs = (data.value as any)?.data ?? data.value ?? [];

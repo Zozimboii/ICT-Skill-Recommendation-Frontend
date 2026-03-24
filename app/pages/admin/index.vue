@@ -4,7 +4,7 @@ import { useAdmin } from '~/composables/useAdmin';
 import type { AdminStats, AdminUserItem, AdminJobItem, AdminSkillItem } from '~/types/Admin';
 
 useHead({ title: 'Admin — ICT Skill' });
-const { getStats, getUsers, toggleUser, getJobs, deleteJob, getSkills, createSkill, deleteSkill, triggerScrape } = useAdmin();
+const { getStats, getUsers, toggleUser, getJobs, deleteJob, getSkills, createSkill, deleteSkill, triggerScrape, deleteUser } = useAdmin();
 
 type Tab = 'users' | 'jobs' | 'skills';
 const activeTab = ref<Tab>('users');
@@ -52,6 +52,23 @@ const handleToggleUser = async (user: AdminUserItem) => {
         showToast(`${user.email} — ${!user.is_active ? 'เปิด' : 'ปิด'}ใช้งานแล้ว`);
     } catch {
         showToast('เกิดข้อผิดพลาด', 'err');
+    } finally {
+        actionLoading.value = false;
+    }
+};
+const handleDeleteUser = async (user: any) => {
+    if (!confirm(`Delete ${user.email}?`)) return;
+
+    try {
+        actionLoading.value = true;
+
+        await deleteUser(user.id);
+
+        users.value = users.value.filter((u: any) => u.id !== user.id);
+
+    } catch (err) {
+        console.error(err);
+        alert('Delete failed');
     } finally {
         actionLoading.value = false;
     }
@@ -234,6 +251,7 @@ onMounted(async () => {
                             <th class="px-5 py-4 text-left font-semibold">Role</th>
                             <th class="px-5 py-4 text-center font-semibold">สถานะ</th>
                             <th class="px-5 py-4 text-center font-semibold">Action</th>
+                            <th class="px-5 py-4 text-center font-semibold">Manage</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -285,6 +303,16 @@ onMounted(async () => {
                                     {{ user.is_active ? 'Deactivate' : 'Activate' }}
                                 </button>
                             </td>
+                            <td class="px-5 py-4 text-center">
+                                <button
+                                    :disabled="actionLoading || user.role === 'admin'"
+                                    class="px-3 py-1.5 rounded-lg text-base font-semibold transition-all disabled:opacity-30"
+                                    style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25)"
+                                    @click="handleDeleteUser(user)"
+                                >
+                                    Delete
+                                </button>
+                            </td>
                         </tr>
                         <tr v-if="!users.length">
                             <td colspan="5" class="px-5 py-12 text-center text-base text-slate-300">ไม่พบข้อมูล</td>
@@ -299,7 +327,7 @@ onMounted(async () => {
                     <input
                         v-model="jobKeyword"
                         type="text"
-                        placeholder="ค้นหาชื่องาน..."
+                        placeholder="ค้นหาตำแหน่งงาน..."
                         class="flex-1 px-4 py-3 rounded-xl text-white placeholder-slate-500 outline-none text-base"
                         style="background: rgba(13, 95, 163, 0.08); border: 1px solid rgba(42, 127, 212, 0.2)"
                         @keydown.enter="searchJobs"
@@ -308,12 +336,12 @@ onMounted(async () => {
                         ค้นหา
                     </button>
                 </div>
-                <p class="text-base text-slate-300">ทั้งหมด {{ jobTotal.toLocaleString() }} งาน</p>
+                <p class="text-base text-slate-300">ทั้งหมด {{ jobTotal.toLocaleString() }} ตำแหน่งงาน</p>
                 <div class="rounded-2xl overflow-hidden" style="background: rgba(8, 18, 36, 0.6); border: 1px solid rgba(42, 127, 212, 0.15)">
                     <table class="w-full">
                         <thead>
                             <tr class="text-base uppercase tracking-widest text-slate-300" style="border-bottom: 1px solid rgba(42, 127, 212, 0.15)">
-                                <th class="px-5 py-4 text-left font-semibold">ชื่องาน</th>
+                                <th class="px-5 py-4 text-left font-semibold">ชื่อตำแหน่งงาน</th>
                                 <th class="px-5 py-4 text-left font-semibold">บริษัท</th>
                                 <th class="px-5 py-4 text-left font-semibold">สายงาน</th>
                                 <th class="px-5 py-4 text-center font-semibold">Skills</th>
