@@ -25,7 +25,7 @@ const loadingSkills = ref(false);
 const saving = ref(false);
 const saved = ref(false);
 const resetting = ref(false);
-const savedOnce = ref(false); // เคย save แล้วหรือยัง
+const savedOnce = ref(false);
 
 const handleReset = async () => {
     if (!confirm('ต้องการล้างผลและเริ่มใหม่?')) return;
@@ -54,9 +54,8 @@ const demandStyle = (weight: number) => {
 
 const route = useRoute();
 
-// ── โหลด positions ──────────────────────────────────────────────────────────
 const loadPositions = async () => {
-    if (positions.value.length > 0) return; // โหลดแล้วไม่โหลดซ้ำ
+    if (positions.value.length > 0) return;
     loadingPositions.value = true;
     try {
         positions.value = await getPositions();
@@ -68,13 +67,11 @@ const loadPositions = async () => {
 onMounted(async () => {
     await loadPositions();
 
-    // reload เมื่อ user กลับมาที่ tab
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden) await loadPositions();
     });
 });
 
-// reload เมื่อ navigate กลับมาหน้า assessment
 watch(
     () => route.path,
     async (p) => {
@@ -95,37 +92,6 @@ const handleSelect = async (id: string) => {
     try {
         const res = await getPositionSkills(id);
 
-        // ── DEBUG: ดูข้อมูลดิบจาก backend ─────────────────────────────
-        const hard = res.skills.filter((s) => s.skill_type === 'hard_skill');
-        const soft = res.skills.filter((s) => s.skill_type === 'soft_skill');
-
-        console.group(`📊 Position Skills — ${res.position_name} (${res.total_jobs} jobs)`);
-        console.log(`รวมทั้งหมด: ${res.skills.length} skills  |  Hard: ${hard.length}  Soft: ${soft.length}`);
-
-        console.group('🔵 Hard Skills (จาก backend)');
-        console.table(
-            hard.map((s) => ({
-                name: s.skill_name,
-                weight: s.weight,
-                frequency: s.frequency + '%',
-                job_count: s.job_count,
-            })),
-        );
-        console.groupEnd();
-
-        console.group('🟢 Soft Skills (จาก backend)');
-        console.table(
-            soft.map((s) => ({
-                name: s.skill_name,
-                weight: s.weight,
-                frequency: s.frequency + '%',
-                job_count: s.job_count,
-            })),
-        );
-        console.groupEnd();
-        console.groupEnd();
-        // ── END DEBUG ──────────────────────────────────────────────────
-
         positionSkills.value = res.skills;
         positionName.value = res.position_name;
         totalJobs.value = res.total_jobs;
@@ -135,14 +101,12 @@ const handleSelect = async (id: string) => {
     }
 };
 
-// กดปุ่มเลือกคะแนน — แค่ update state ไม่ save
 const setScore = (skillId: number, score: number) => {
     const item = userScores.value.find((s) => s.skill_id === skillId);
     if (item) item.score = score;
-    saved.value = false; // ถ้าเปลี่ยนคะแนน = ต้อง save ใหม่
+    saved.value = false;
 };
 
-// กดปุ่ม "บันทึกผล" ครั้งเดียว
 const handleSave = async () => {
     if (!selectedId.value || !isLoggedIn.value) return;
     const scores = userScores.value.filter((s) => s.score > 0).map((s) => ({ skill_id: s.skill_id, score: s.score }));
@@ -152,90 +116,28 @@ const handleSave = async () => {
         await saveAssessment(selectedId.value, scores);
         saved.value = true;
         savedOnce.value = true;
-        // reload dashboard store ด้วย $fetch (ไม่ต้องรอ)
+
         dashboardStore.reload();
     } catch {
-        // error silently — user can retry
     } finally {
         saving.value = false;
     }
 };
 
-// ── Live computed (ไม่ต้อง save ก็ดูได้) ──────────────────────────
-// ── Radar: กรอง skill ชื่อสั้นเกิน (เช่น "R", "C") ออก + limit 16 ──
-// กรอง skill ชื่อสั้น/ไม่มีความหมาย เช่น "R", "C", "VB"
 function isValidSkill(name: string): boolean {
     const n = name.trim();
     if (n.length <= 1) return false;
-    if (/^[A-Z]$/.test(n)) return false; // R, C, F (uppercase เดี่ยว)
-    if (/^[A-Z]{2}$/.test(n)) return false; // VB, VB (2 uppercase)
+    if (/^[A-Z]$/.test(n)) return false;
+    if (/^[A-Z]{2}$/.test(n)) return false;
     return true;
 }
-
-// filteredPositionSkills:
-// - กรอง skill ชื่อสั้น/ไม่มีความหมาย
-// - กรองเฉพาะ frequency >= 10 (ต้องการน้อยเกินออก)
-// - เรียง weight desc เพื่อให้ skill สำคัญขึ้นก่อนเสมอ
 const filteredPositionSkills = computed(() => positionSkills.value.filter((s) => isValidSkill(s.skill_name) && s.frequency >= 10).sort((a, b) => b.weight - a.weight));
-
-// ── DEBUG: log เมื่อ computed เปลี่ยน ─────────────────────────────────────
-watchEffect(() => {
-    if (!positionSkills.value.length) return;
-
-    const removed = positionSkills.value.filter((s) => !isValidSkill(s.skill_name) || s.frequency < 10);
-    if (removed.length) {
-        console.group('🚫 Skills ที่ถูก filter ออก (isValidSkill=false หรือ frequency<10%)');
-        console.table(
-            removed.map((s) => ({
-                name: s.skill_name,
-                type: s.skill_type,
-                frequency: s.frequency + '%',
-                weight: s.weight,
-                reason: !isValidSkill(s.skill_name) ? 'ชื่อสั้น/ไม่ valid' : 'frequency ต่ำ',
-            })),
-        );
-        console.groupEnd();
-    }
-
-    console.group('✅ filteredPositionSkills (ที่แสดงฝั่งซ้าย)');
-    console.table(
-        filteredPositionSkills.value.map((s) => ({
-            name: s.skill_name,
-            type: s.skill_type,
-            weight: s.weight,
-            frequency: s.frequency + '%',
-        })),
-    );
-    console.groupEnd();
-
-    console.group('🔵 hardSkillItems (Hard Radar)');
-    console.table(
-        hardSkillItems.value.map((s) => ({
-            name: s.skill_name,
-            weight: s.weight,
-            frequency: s.frequency + '%',
-        })),
-    );
-    console.groupEnd();
-
-    console.group('🟢 softSkillItems (Soft Radar)');
-    console.table(
-        softSkillItems.value.map((s) => ({
-            name: s.skill_name,
-            weight: s.weight,
-            frequency: s.frequency + '%',
-        })),
-    );
-    console.groupEnd();
-});
 
 const RADAR_MAX = 16;
 const radarSkills = computed(() => filteredPositionSkills.value.slice(0, RADAR_MAX));
 const radarLabels = computed(() => radarSkills.value.map((s) => s.skill_name));
 const jobData = computed(() => radarSkills.value.map((s) => s.weight));
 const userData = computed(() => {
-    // score 0-5 → แปลงเป็น % ที่เทียบกับ weight ของงาน
-    // เช่น score=4/5 บน skill weight=80 → 64 (แสดงว่าครอบคลุม 80% ของที่งานต้องการ)
     const map = new Map(userScores.value.map((s) => [s.skill_id, s.score]));
     return radarSkills.value.map((s) => {
         const score = map.get(s.skill_id) ?? 0;
@@ -260,8 +162,6 @@ const gaps = computed(() =>
 );
 const topDemands = computed(() => filteredPositionSkills.value.filter((s) => s.weight >= 70).slice(0, 6));
 
-// ── Priority Score = (frequency*0.7) + (gap_normalized*0.3) ──────────────
-// เรียง skill ที่ควรพัฒนาก่อนโดยรวม market demand + ช่องว่างของ user
 const prioritySkills = computed(() => {
     const scoreMap = new Map(userScores.value.map((s) => [s.skill_id, s.score]));
     return (
