@@ -2,11 +2,11 @@
 
 ## DEMO: VIDEO
 
-[System Concept &Skill Trends & Job Search](https://youtu.be/FI7PBpGdnkY)
+1. [System Concept &Skill Trends & Job Search](https://youtu.be/FI7PBpGdnkY)
 
-[AI Skill Analysis & User Assessment](https://youtu.be/lKsy3q15cvY)
+2. [AI Skill Analysis & User Assessment](https://youtu.be/lKsy3q15cvY)
 
-[User Dashboard & System Management](https://youtu.be/nREshTdHzn0)
+3. [User Dashboard & System Management](https://youtu.be/nREshTdHzn0)
 
 Nuxt 3 frontend สำหรับระบบวิเคราะห์ทักษะและแนะนำงาน ICT ไทย
 
